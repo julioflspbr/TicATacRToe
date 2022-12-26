@@ -9,11 +9,12 @@ import SceneKit
 import SwiftUI
 
 struct RenderView: UIViewRepresentable {
-    @EnvironmentObject private var gameController: GameController
+    let scene: SCNScene
+    @Binding private(set) var sceneController: SceneController?
 
     func makeUIView(context: Context) -> SCNView {
         let sceneView = SCNView(frame: .zero, options: nil)
-        sceneView.scene = self.gameController.scene
+        sceneView.scene = self.scene
         sceneView.backgroundColor = .black
         sceneView.autoenablesDefaultLighting = true
         sceneView.allowsCameraControl = false
@@ -27,12 +28,12 @@ struct RenderView: UIViewRepresentable {
 
     func makeCoordinator() -> SceneController {
         let sceneController = SceneController()
-        self.gameController.delegate = sceneController
+        self.sceneController = sceneController
         return sceneController
     }
 }
 
-final class SceneController: GameControllerDelegate {
+final class SceneController {
     fileprivate var sceneView: SCNView?
 
     func queryPlaceNode(at point: CGPoint) -> Place? {

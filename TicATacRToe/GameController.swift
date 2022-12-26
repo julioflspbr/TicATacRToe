@@ -5,22 +5,22 @@
 //  Created by Julio Flores on 21/12/2022.
 //
 
+import SwiftUI
 import SceneKit
 
-protocol GameControllerDelegate: AnyObject {
-    func queryPlaceNode(at: CGPoint) -> Place?
-}
-
 final class GameController: ObservableObject {
+    let scene: SCNScene
+
+    @Published var sceneController: SceneController?
+    @Published var currentAvatar = Actor.Avatar.cross
+    @Published var nickname = ""
+    @Published var opponent: String?
+    @Published var availablePlayers = [String]()
+    @Published var isGameSetup = false
+
     private let camera: SCNNode
 
     private var state: [Actor.Avatar : Set<Place.Position>]
-
-    let scene: SCNScene
-
-    weak var delegate: GameControllerDelegate?
-
-    @Published private(set) var currentAvatar = Actor.Avatar.cross
 
     init() {
         self.state = [.cross: [], .circle: []]
@@ -39,7 +39,7 @@ final class GameController: ObservableObject {
 
     func handleTap(at point: CGPoint) {
         do {
-            guard let placeNode = self.delegate?.queryPlaceNode(at: point) else {
+            guard let placeNode = self.sceneController?.queryPlaceNode(at: point) else {
                 return
             }
 

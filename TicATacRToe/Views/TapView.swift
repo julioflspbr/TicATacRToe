@@ -8,11 +8,11 @@
 import SwiftUI
 
 struct TapView: View {
-    @EnvironmentObject private var gameController: GameController
+    let action: ((CGPoint) -> Void)
 
     var body: some View {
         Color.clear
             .contentShape(Rectangle())
-            .onTapGesture(coordinateSpace: .global, perform: self.gameController.handleTap(at:))
+            .onTapGesture(coordinateSpace: .global, perform: self.action)
     }
 }
