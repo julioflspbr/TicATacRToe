@@ -8,9 +8,7 @@
 import SwiftUI
 
 struct LobbyView: View {
-    @Binding private(set) var nickname: String
-    @Binding private(set) var opponent: String?
-    @Binding private(set) var availablePlayers: [String]
+    @EnvironmentObject private var gameController: GameController
 
     var body: some View {
         VStack {
@@ -23,14 +21,7 @@ struct LobbyView: View {
                         .font(.appDefault)
                         .fontWeight(.bold)
 
-                    TextField("choose nickname", text: Binding(
-                        get: {
-                            self.nickname.lowercased()
-                        },
-                        set: { newValue in
-                            self.nickname = String(newValue.prefix(10))
-                        })
-                    )
+                    TextField("choose nickname", text: $gameController.nickname)
                     .font(.appDefault)
                     .lineLimit(1)
                 }
@@ -41,14 +32,14 @@ struct LobbyView: View {
                     Text("opponent:")
                         .font(.appDefault)
                         .fontWeight(.bold)
-                    Text(self.opponent ?? "pick opponent below")
+                    Text(self.gameController.opponent ?? "pick opponent below")
                         .font(.appDefault)
-                        .foregroundColor(self.opponent == nil ? .secondary : .primary)
+                        .foregroundColor(self.gameController.opponent == nil ? .secondary : .primary)
                 }
                 .padding(.horizontal)
             }
 
-            PickView(source: self.availablePlayers, selected: $opponent)
+            PickView(source: self.gameController.availablePlayers, selected: $gameController.opponent)
                 .frame(minHeight: 60)
                 .padding(.bottom)
         }
@@ -61,15 +52,12 @@ struct LobbyView: View {
 
 struct LobbyView_Previews: PreviewProvider {
     static var previews: some View {
-        LobbyView(
-            nickname: .constant("jessica"),
-            opponent: .constant(nil),
-            availablePlayers: .constant(NameProvider.provide(amount: 3))
-        )
+        LobbyView()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
             Color.gray
                 .ignoresSafeArea()
         }
+        .environmentObject(GameController())
     }
 }

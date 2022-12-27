@@ -8,43 +8,33 @@
 import SwiftUI
 import SceneKit
 
-final class GameController: ObservableObject {
-    let scene: SCNScene
+protocol GameControllerSceneDelegate: AnyObject {
+    func queryPlace(at: CGPoint) -> Place?
+    func strikeThrough(_: StrikeThrough.StrikeType) -> Void
+}
 
-    @Published var sceneController: SceneController?
+final class GameController: ObservableObject {
+    weak var sceneDelegate: GameControllerSceneDelegate?
+
     @Published var currentAvatar = Actor.Avatar.cross
     @Published var nickname = ""
     @Published var opponent: String?
     @Published var availablePlayers = [String]()
-    @Published var isGameSetup = false
 
-    private let camera: SCNNode
+    private var state = [Actor.Avatar.cross: Set<Place.Position>(), Actor.Avatar.circle: Set<Place.Position>()]
 
-    private var state: [Actor.Avatar : Set<Place.Position>]
-
-    init() {
-        self.state = [.cross: [], .circle: []]
-
-        self.scene = SCNScene()
-        self.scene.rootNode.addChildNode(Grid())
-
-        let camera = SCNCamera()
-        camera.automaticallyAdjustsZRange = true
-
-        self.camera = SCNNode()
-        self.camera.position.z = 2.5
-        self.camera.camera = camera
-        self.scene.rootNode.addChildNode(self.camera)
+    var isGameSetup: Bool {
+        self.nickname.count >= 3 && opponent != nil
     }
 
     func handleTap(at point: CGPoint) {
         do {
-            guard let placeNode = self.sceneController?.queryPlaceNode(at: point) else {
+            guard let placeNode = self.sceneDelegate?.queryPlace(at: point) else {
                 return
             }
 
             try placeNode.fill(with: self.currentAvatar)
-            state[self.currentAvatar]?.insert(placeNode.place)
+            self.state[self.currentAvatar]?.insert(placeNode.place)
             self.checkVictoryCondition()
             self.currentAvatar.toggle()
         } catch {
@@ -59,52 +49,22 @@ final class GameController: ObservableObject {
         }
 
         if state.contains(elements: [.topLeft, .top, .topRight]) {
-            self.createStrikeThrough(type: .horizontal(.top))
+            self.sceneDelegate?.strikeThrough(.horizontal(.top))
         } else if state.contains(elements: [.left, .centre, .right]) {
-            self.createStrikeThrough(type: .horizontal(.centre))
+            self.sceneDelegate?.strikeThrough(.horizontal(.centre))
         } else if state.contains(elements: [.bottomLeft, .bottom, .bottomRight]) {
-            self.createStrikeThrough(type: .horizontal(.bottom))
+            self.sceneDelegate?.strikeThrough(.horizontal(.bottom))
         } else if state.contains(elements: [.topLeft, .left, .bottomLeft]) {
-            self.createStrikeThrough(type: .vertical(.left))
+            self.sceneDelegate?.strikeThrough(.vertical(.left))
         } else if state.contains(elements: [.top, .centre, .bottom]) {
-            self.createStrikeThrough(type: .vertical(.centre))
+            self.sceneDelegate?.strikeThrough(.vertical(.centre))
         } else if state.contains(elements: [.topRight, .right, .bottomRight]) {
-            self.createStrikeThrough(type: .vertical(.right))
+            self.sceneDelegate?.strikeThrough(.vertical(.right))
         } else if state.contains(elements: [.topLeft, .centre, .bottomRight]) {
-            self.createStrikeThrough(type: .diagonal(.leftTop))
+            self.sceneDelegate?.strikeThrough(.diagonal(.leftTop))
         } else if state.contains(elements: [.topRight, .centre, .bottomLeft]) {
-            self.createStrikeThrough(type: .diagonal(.rightTop))
+            self.sceneDelegate?.strikeThrough(.diagonal(.rightTop))
         }
-    }
-
-    private func createStrikeThrough(type: StrikeThrough.StrikeType) {
-        let shift: Float = 0.33
-        let strikeThrough = StrikeThrough(type: type)
-
-        switch type {
-            case let .horizontal(position):
-                switch position {
-                    case .top:
-                        strikeThrough.position = SCNVector3(0.0, shift, 0.0)
-                    case .centre:
-                        strikeThrough.position = SCNVector3(0.0, 0.0, 0.0)
-                    case .bottom:
-                        strikeThrough.position = SCNVector3(0.0, -shift, 0.0)
-                }
-            case let .vertical(position):
-                switch position {
-                    case .left:
-                        strikeThrough.position = SCNVector3(-shift, 0.0, 0.0)
-                    case .centre:
-                        strikeThrough.position = SCNVector3(0.0, 0.0, 0.0)
-                    case .right:
-                        strikeThrough.position = SCNVector3(shift, 0.0, 0.0)
-                }
-            case .diagonal:
-                strikeThrough.position = SCNVector3(0.0, 0.0, 0.0)
-        }
-
-        self.scene.rootNode.addChildNode(strikeThrough)
     }
 }
 

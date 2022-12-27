@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var gameController = GameController()
+    @EnvironmentObject private var gameController: GameController
 
     var body: some View {
         ZStack {
@@ -20,13 +20,10 @@ struct ContentView: View {
 
     var threeDeeArea: some View {
         Group {
-            RenderView(
-                scene: self.gameController.scene,
-                sceneController: $gameController.sceneController
-            )
-            .ignoresSafeArea()
+            RenderView()
+                .ignoresSafeArea()
 
-            TapView(action: self.gameController.handleTap(at:))
+            TapView()
         }
     }
 
@@ -45,11 +42,7 @@ struct ContentView: View {
             Spacer()
             
             if !self.gameController.isGameSetup {
-                LobbyView(
-                    nickname: $gameController.nickname,
-                    opponent: $gameController.opponent,
-                    availablePlayers: $gameController.availablePlayers
-                )
+                LobbyView()
             }
         }
     }
@@ -58,5 +51,6 @@ struct ContentView: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+            .environmentObject(GameController())
     }
 }
