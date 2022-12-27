@@ -12,6 +12,8 @@ struct PickView: View {
 
     @Binding private(set) var selected: String?
 
+    @Environment(\.colorScheme) private var colourScheme
+
     init(source: [String], selected: Binding<String?>) {
         var flatSource = source
         let lineItemLimit = 4
@@ -34,7 +36,7 @@ struct PickView: View {
                 ForEach(self.source, id: \.self) { line in
                     HStack {
                         ForEach(line, id: \.self) { item in
-                            PickButton(text: item) { selected in
+                            PickButton(foreground: self.buttonTextColour, background: self.generateRandomColour(), text: item) { selected in
                                 self.selected = selected
                             }
                         }
@@ -47,13 +49,39 @@ struct PickView: View {
                 .font(.appDefault)
         }
     }
+
+    private func generateRandomColour() -> Color {
+        let colourRange: ClosedRange<Double>
+        switch self.colourScheme {
+            case .light:
+                colourRange = 0 ... 0.5
+            case .dark:
+                colourRange = 0.5 ... 1.0
+            @unknown default:
+                colourRange = 0 ... 0.5
+        }
+
+        return Color(red: .random(in: colourRange), green: .random(in: colourRange), blue: .random(in: colourRange))
+    }
+
+    private var buttonTextColour: Color {
+        switch self.colourScheme {
+            case .light:
+                return .white
+            case .dark:
+                return .black
+            @unknown default:
+                return .white
+        }
+    }
 }
 
 private struct PickButton: View {
+    @State private(set) var foreground: Color
+    @State private(set) var background: Color
+
     let text: String
     let select: (String) -> Void
-
-    @Environment(\.colorScheme) private var colourScheme
 
     var body: some View {
         Button(self.text) {
@@ -68,36 +96,10 @@ private struct PickButton: View {
                 .foregroundColor(self.background)
         }
     }
-
-    private var foreground: Color {
-        switch self.colourScheme {
-            case .light:
-                return .white
-            case .dark:
-                return .black
-            @unknown default:
-                return .white
-        }
-    }
-
-    private var background: Color {
-        let colourRange: ClosedRange<Double>
-
-        switch self.colourScheme {
-            case .light:
-                colourRange = 0 ... 0.5
-            case .dark:
-                colourRange = 0.5 ... 1.0
-            @unknown default:
-                colourRange = 0 ... 0.5
-        }
-
-        return Color(red: .random(in: colourRange), green: .random(in: colourRange), blue: .random(in: colourRange))
-    }
 }
 
 struct PickView_Preview: PreviewProvider {
     static var previews: some View {
-        PickView(source: NameProvider.provide(amount: 0), selected: .constant(nil))
+        PickView(source: NameProvider.provide(amount: 20), selected: .constant(nil))
     }
 }

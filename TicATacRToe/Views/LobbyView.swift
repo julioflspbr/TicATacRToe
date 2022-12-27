@@ -15,8 +15,8 @@ struct LobbyView: View {
             Text("Lobby")
                 .font(.appTitle)
 
-            VStack(alignment: .leading) {
-                HStack {
+            SwiftUI.Grid(alignment: .leading) {
+                GridRow {
                     Text("nickname:")
                         .font(.appDefault)
                         .fontWeight(.bold)
@@ -25,19 +25,17 @@ struct LobbyView: View {
                     .font(.appDefault)
                     .lineLimit(1)
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 5)
 
-                HStack {
+                GridRow {
                     Text("opponent:")
                         .font(.appDefault)
                         .fontWeight(.bold)
                     Text(self.gameController.opponent ?? "pick opponent below")
                         .font(.appDefault)
-                        .foregroundColor(self.gameController.opponent == nil ? .secondary : .primary)
+                        .foregroundColor(self.gameController.opponent == nil ? .secondary.opacity(0.45) : .primary)
                 }
-                .padding(.horizontal)
             }
+            .padding(.horizontal)
 
             PickView(source: self.gameController.availablePlayers, selected: $gameController.opponent)
                 .frame(minHeight: 60)

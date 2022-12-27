@@ -13,17 +13,34 @@ protocol GameControllerSceneDelegate: AnyObject {
     func strikeThrough(_: StrikeThrough.StrikeType) -> Void
 }
 
+protocol GameControllerInterruptionDelegate: AnyObject {
+    func allow3DInteraction()
+    func deny3DInteraction()
+    func handleError(_ error: Error)
+}
+
 final class GameController: ObservableObject {
     weak var sceneDelegate: GameControllerSceneDelegate?
+    weak var interruptionDelegate: GameControllerInterruptionDelegate?
 
-    @Published var currentAvatar = Actor.Avatar.cross
-    @Published var nickname = ""
-    @Published var opponent: String?
+    @Published private(set) var currentAvatar = Actor.Avatar.cross
+
     @Published var availablePlayers = [String]()
+
+    @Published var nickname = "" {
+        didSet {
+            self.checkSetupState()
+        }
+    }
+    @Published var opponent: String? {
+        didSet {
+            self.checkSetupState()
+        }
+    }
 
     private var state = [Actor.Avatar.cross: Set<Place.Position>(), Actor.Avatar.circle: Set<Place.Position>()]
 
-    var isGameSetup: Bool {
+    var isGameSetUp: Bool {
         self.nickname.count >= 3 && opponent != nil
     }
 
@@ -38,8 +55,15 @@ final class GameController: ObservableObject {
             self.checkVictoryCondition()
             self.currentAvatar.toggle()
         } catch {
-            // TODO: implement error handler
-            assertionFailure(error.localizedDescription)
+            self.interruptionDelegate?.handleError(error)
+        }
+    }
+
+    private func checkSetupState() {
+        if self.isGameSetUp {
+            self.interruptionDelegate?.allow3DInteraction()
+        } else {
+            self.interruptionDelegate?.deny3DInteraction()
         }
     }
 

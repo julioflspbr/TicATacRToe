@@ -9,12 +9,18 @@ import SwiftUI
 
 @main
 struct TicATacRToeApp: App {
-    @StateObject private var gameController = GameController()
+    private let gameController = GameController()
+    private let interruptionController = InterruptionController()
+
+    init() {
+        self.gameController.interruptionDelegate = self.interruptionController
+    }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(self.gameController)
+                .environmentObject(self.interruptionController)
         }
     }
 }

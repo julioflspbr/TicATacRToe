@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var gameController: GameController
+    @EnvironmentObject private var interruptionController: InterruptionController
 
     var body: some View {
         ZStack {
@@ -16,6 +17,7 @@ struct ContentView: View {
             interruptionBackground
             lobby
         }
+        .alertHandler()
     }
 
     var threeDeeArea: some View {
@@ -29,7 +31,7 @@ struct ContentView: View {
 
     var interruptionBackground: some View {
         Group {
-            if !self.gameController.isGameSetup {
+            if self.interruptionController.is3DInteractionDenied {
                 Rectangle()
                     .ignoresSafeArea()
                     .background(.ultraThinMaterial)
@@ -41,7 +43,7 @@ struct ContentView: View {
         VStack {
             Spacer()
             
-            if !self.gameController.isGameSetup {
+            if !self.gameController.isGameSetUp {
                 LobbyView()
             }
         }
@@ -50,7 +52,14 @@ struct ContentView: View {
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView()
-            .environmentObject(GameController())
+        let gameController = GameController()
+        let interruptionController = InterruptionController()
+
+        gameController.interruptionDelegate = interruptionController
+        gameController.availablePlayers = NameProvider.provide(amount: 2)
+
+        return ContentView()
+            .environmentObject(gameController)
+            .environmentObject(interruptionController)
     }
 }
