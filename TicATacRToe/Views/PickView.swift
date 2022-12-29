@@ -6,21 +6,22 @@
 //
 
 import SwiftUI
+import MultipeerConnectivity
 
 struct PickView: View {
-    private let source: [[String]]
+    private let source: [[MCPeerID]]
 
-    @Binding private(set) var selected: String?
+    @Binding private(set) var selected: MCPeerID?
 
     @Environment(\.colorScheme) private var colourScheme
 
-    init(source: [String], selected: Binding<String?>) {
+    init(source: [MCPeerID], selected: Binding<MCPeerID?>) {
         var flatSource = source
         let lineItemLimit = 4
-        var groupedSource = [[String]]()
+        var groupedSource = [[MCPeerID]]()
 
         while flatSource.count > 0 {
-            var line = [String]()
+            var line = [MCPeerID]()
             while line.count < lineItemLimit && flatSource.count > 0 {
                 line.append(flatSource.removeFirst())
             }
@@ -31,22 +32,26 @@ struct PickView: View {
     }
 
     var body: some View {
-        if self.source.count > 0 {
+        if let selected {
+            ProgressView(label: { Text("Waiting for \(selected.displayName)'s response") })
+                .progressViewStyle(.circular)
+                .font(.appDefault)
+        } else if self.source.isEmpty {
+            ProgressView(label: { Text("Searching for players") })
+                .progressViewStyle(.circular)
+                .font(.appDefault)
+        } else if self.source.count > 0 {
             VStack {
                 ForEach(self.source, id: \.self) { line in
                     HStack {
                         ForEach(line, id: \.self) { item in
-                            PickButton(foreground: self.buttonTextColour, background: self.generateRandomColour(), text: item) { selected in
+                            PickButton(foreground: self.buttonTextColour, background: self.generateRandomColour(), item: item) { selected in
                                 self.selected = selected
                             }
                         }
                     }
                 }
             }
-        } else {
-            ProgressView(label: { Text("Searching for players") })
-                .progressViewStyle(.circular)
-                .font(.appDefault)
         }
     }
 
@@ -80,12 +85,12 @@ private struct PickButton: View {
     @State private(set) var foreground: Color
     @State private(set) var background: Color
 
-    let text: String
-    let select: (String) -> Void
+    let item: MCPeerID
+    let select: (MCPeerID) -> Void
 
     var body: some View {
-        Button(self.text) {
-            select(self.text)
+        Button(self.item.displayName) {
+            select(self.item)
         }
         .font(.appDefault)
         .padding(.vertical, 3)

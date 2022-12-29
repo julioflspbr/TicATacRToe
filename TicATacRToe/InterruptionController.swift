@@ -7,33 +7,36 @@
 
 import SwiftUI
 
-final class InterruptionController: ObservableObject, GameControllerInterruptionDelegate {
-    @Published var shouldPresentAlert: Bool = false {
+final class InterruptionController: ObservableObject, GameControllerInterruptionDelegate, BroadcastControllerAlertDelegate {
+    @Published fileprivate var isDisplayingAlert: Bool = false {
         didSet {
-            self.is3DInteractionDenied = self.shouldPresentAlert
             self.alert = (self.is3DInteractionDenied ? self.alert : nil)
         }
     }
 
-    @Published private(set) var is3DInteractionDenied = true
-
     @Published fileprivate private(set) var alert: InterruptingAlert.AlertContent?
 
-    func allow3DInteraction() {
+    @Published private var is3DInteractionDenied = true
+
+    var isInteractionBlocked: Bool {
+        self.isDisplayingAlert || is3DInteractionDenied
+    }
+
+    @MainActor func allow3DInteraction() {
         self.is3DInteractionDenied = false
     }
 
-    func deny3DInteraction() {
+    @MainActor func deny3DInteraction() {
         self.is3DInteractionDenied = true
     }
 
-    func handleError(_ error: Error) {
-        self.showAlert(title: "Error", description: error.localizedDescription)
+    @MainActor func handleError(_ error: Error) {
+        self.showAlert(title: "Bummer", description: error.localizedDescription)
     }
 
-    func showAlert(title: String, description: String, actions: [InterruptingAlert.Action] = []) {
+    @MainActor func showAlert(title: String, description: String, actions: [InterruptingAlert.Action] = []) {
         self.alert = InterruptingAlert.AlertContent(title: title, description: description, actions: actions)
-        self.shouldPresentAlert = true
+        self.isDisplayingAlert = true
     }
 }
 
@@ -65,7 +68,7 @@ struct InterruptingAlert: ViewModifier {
     func body(content: Content) -> some View {
         content.alert(
             self.interruptionController.alert?.title ?? "",
-            isPresented: $interruptionController.shouldPresentAlert,
+            isPresented: $interruptionController.isDisplayingAlert,
             presenting: self.interruptionController.alert,
             actions: { alert in
                 ForEach(alert.actions, id: \.title) { action in

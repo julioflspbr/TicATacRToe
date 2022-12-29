@@ -19,30 +19,23 @@ protocol GameControllerInterruptionDelegate: AnyObject {
     func handleError(_ error: Error)
 }
 
-final class GameController: ObservableObject {
+final class GameController: ObservableObject, BroadcastControllerGameSetupDelegate {
     weak var sceneDelegate: GameControllerSceneDelegate?
     weak var interruptionDelegate: GameControllerInterruptionDelegate?
 
+    @Published var isGameSetUp = false {
+        didSet {
+            if self.isGameSetUp {
+                self.interruptionDelegate?.allow3DInteraction()
+            } else {
+                self.interruptionDelegate?.deny3DInteraction()
+            }
+        }
+    }
+
     @Published private(set) var currentAvatar = Actor.Avatar.cross
 
-    @Published var availablePlayers = [String]()
-
-    @Published var nickname = "" {
-        didSet {
-            self.checkSetupState()
-        }
-    }
-    @Published var opponent: String? {
-        didSet {
-            self.checkSetupState()
-        }
-    }
-
     private var state = [Actor.Avatar.cross: Set<Place.Position>(), Actor.Avatar.circle: Set<Place.Position>()]
-
-    var isGameSetUp: Bool {
-        self.nickname.count >= 3 && opponent != nil
-    }
 
     func handleTap(at point: CGPoint) {
         do {
@@ -56,14 +49,6 @@ final class GameController: ObservableObject {
             self.currentAvatar.toggle()
         } catch {
             self.interruptionDelegate?.handleError(error)
-        }
-    }
-
-    private func checkSetupState() {
-        if self.isGameSetUp {
-            self.interruptionDelegate?.allow3DInteraction()
-        } else {
-            self.interruptionDelegate?.deny3DInteraction()
         }
     }
 

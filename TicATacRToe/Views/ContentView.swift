@@ -6,9 +6,11 @@
 //
 
 import SwiftUI
+import MultipeerConnectivity
 
 struct ContentView: View {
     @EnvironmentObject private var gameController: GameController
+    @EnvironmentObject private var broadcastController: BroadcastController
     @EnvironmentObject private var interruptionController: InterruptionController
 
     var body: some View {
@@ -31,7 +33,7 @@ struct ContentView: View {
 
     var interruptionBackground: some View {
         Group {
-            if self.interruptionController.is3DInteractionDenied {
+            if self.interruptionController.isInteractionBlocked {
                 Rectangle()
                     .ignoresSafeArea()
                     .background(.ultraThinMaterial)
@@ -53,13 +55,20 @@ struct ContentView: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         let gameController = GameController()
+        let broadcastController = BroadcastController()
         let interruptionController = InterruptionController()
 
         gameController.interruptionDelegate = interruptionController
-        gameController.availablePlayers = NameProvider.provide(amount: 2)
+
+        let mockPeerID = MCPeerID(displayName: "mock-peer-id")
+        let mockServiceBrowser = MCNearbyServiceBrowser(peer: mockPeerID, serviceType: mockPeerID.displayName)
+        for name in NameProvider.provide(amount: 2) {
+            broadcastController.browser(mockServiceBrowser, foundPeer: name, withDiscoveryInfo: nil)
+        }
 
         return ContentView()
             .environmentObject(gameController)
+            .environmentObject(broadcastController)
             .environmentObject(interruptionController)
     }
 }

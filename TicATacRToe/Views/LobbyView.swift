@@ -6,9 +6,10 @@
 //
 
 import SwiftUI
+import MultipeerConnectivity
 
 struct LobbyView: View {
-    @EnvironmentObject private var gameController: GameController
+    @EnvironmentObject private var broadcastController: BroadcastController
 
     var body: some View {
         VStack {
@@ -21,23 +22,25 @@ struct LobbyView: View {
                         .font(.appDefault)
                         .fontWeight(.bold)
 
-                    TextField("choose nickname", text: $gameController.nickname)
-                    .font(.appDefault)
-                    .lineLimit(1)
+                    TextField("choose nickname", text: $broadcastController.nickname)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                        .font(.appDefault)
+                        .lineLimit(1)
                 }
 
                 GridRow {
                     Text("opponent:")
                         .font(.appDefault)
                         .fontWeight(.bold)
-                    Text(self.gameController.opponent ?? "pick opponent below")
+                    Text(self.broadcastController.opponent?.displayName ?? "pick opponent below")
                         .font(.appDefault)
-                        .foregroundColor(self.gameController.opponent == nil ? .secondary.opacity(0.45) : .primary)
+                        .foregroundColor(self.broadcastController.opponent == nil ? .secondary.opacity(0.45) : .primary)
                 }
             }
             .padding(.horizontal)
 
-            PickView(source: self.gameController.availablePlayers, selected: $gameController.opponent)
+            PickView(source: Array(self.broadcastController.availablePlayers.values), selected: $broadcastController.opponent)
                 .frame(minHeight: 60)
                 .padding(.bottom)
         }
@@ -50,12 +53,22 @@ struct LobbyView: View {
 
 struct LobbyView_Previews: PreviewProvider {
     static var previews: some View {
-        LobbyView()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background {
-            Color.gray
-                .ignoresSafeArea()
+        let gameController = GameController()
+        let broadcastController = BroadcastController()
+
+        let mockPeerID = MCPeerID(displayName: "mock-peer-id")
+        let mockServiceBrowser = MCNearbyServiceBrowser(peer: mockPeerID, serviceType: mockPeerID.displayName)
+        for name in NameProvider.provide(amount: 7) {
+            broadcastController.browser(mockServiceBrowser, foundPeer: name, withDiscoveryInfo: nil)
         }
-        .environmentObject(GameController())
+
+        return LobbyView()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background {
+                Color.gray
+                    .ignoresSafeArea()
+            }
+        .environmentObject(gameController)
+        .environmentObject(broadcastController)
     }
 }
