@@ -13,11 +13,17 @@
 		22CAA43E2949B6A400FD9695 /* TicATacRToeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CAA43D2949B6A400FD9695 /* TicATacRToeApp.swift */; };
 		22CAA4402949B6A400FD9695 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CAA43F2949B6A400FD9695 /* ContentView.swift */; };
 		22CAA4422949B6A700FD9695 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 22CAA4412949B6A700FD9695 /* Assets.xcassets */; };
-		22CAA4452949B6A700FD9695 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 22CAA4442949B6A700FD9695 /* Assets.xcassets */; };
 		22CAA4682949B71600FD9695 /* RenderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CAA4672949B71600FD9695 /* RenderView.swift */; };
+		7064274629596FCB00060AAB /* Fonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7064274529596FCB00060AAB /* Fonts.swift */; };
+		70642748295979D200060AAB /* PickView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70642747295979D200060AAB /* PickView.swift */; };
+		7064274A29597AB400060AAB /* NameProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7064274929597AB400060AAB /* NameProvider.swift */; };
+		70B6C787295C0FD500FAB5C6 /* BroadcastController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B6C786295C0FD500FAB5C6 /* BroadcastController.swift */; };
+		70B7A5B9295B6C69006A7D20 /* InterruptionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B7A5B8295B6C69006A7D20 /* InterruptionController.swift */; };
 		70D6955B29584A4F00770807 /* Grid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D6955A29584A4F00770807 /* Grid.swift */; };
 		70D6955D29584B4200770807 /* Actor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D6955C29584B4200770807 /* Actor.swift */; };
 		70D6955F29584C8E00770807 /* StrikeThrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D6955E29584C8E00770807 /* StrikeThrough.swift */; };
+		70D6956429596DAF00770807 /* Images.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D6956329596DAF00770807 /* Images.swift */; };
+		70D6956629596E4B00770807 /* LobbyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D6956529596E4B00770807 /* LobbyView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,9 +36,17 @@
 		22CAA4412949B6A700FD9695 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		22CAA4442949B6A700FD9695 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		22CAA4672949B71600FD9695 /* RenderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderView.swift; sourceTree = "<group>"; };
+		7064274529596FCB00060AAB /* Fonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fonts.swift; sourceTree = "<group>"; };
+		70642747295979D200060AAB /* PickView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickView.swift; sourceTree = "<group>"; };
+		7064274929597AB400060AAB /* NameProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NameProvider.swift; sourceTree = "<group>"; };
+		70B6C786295C0FD500FAB5C6 /* BroadcastController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BroadcastController.swift; sourceTree = "<group>"; };
+		70B6C788295DA20600FAB5C6 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		70B7A5B8295B6C69006A7D20 /* InterruptionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterruptionController.swift; sourceTree = "<group>"; };
 		70D6955A29584A4F00770807 /* Grid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Grid.swift; sourceTree = "<group>"; };
 		70D6955C29584B4200770807 /* Actor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Actor.swift; sourceTree = "<group>"; };
 		70D6955E29584C8E00770807 /* StrikeThrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrikeThrough.swift; sourceTree = "<group>"; };
+		70D6956329596DAF00770807 /* Images.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Images.swift; sourceTree = "<group>"; };
+		70D6956529596E4B00770807 /* LobbyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LobbyView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,9 +79,12 @@
 		22CAA43C2949B6A400FD9695 /* TicATacRToe */ = {
 			isa = PBXGroup;
 			children = (
+				70B6C788295DA20600FAB5C6 /* Info.plist */,
+				70B6C786295C0FD500FAB5C6 /* BroadcastController.swift */,
 				22B360FA2952EF57004D49C9 /* GameController.swift */,
+				70B7A5B8295B6C69006A7D20 /* InterruptionController.swift */,
 				22CAA43D2949B6A400FD9695 /* TicATacRToeApp.swift */,
-				22CAA4412949B6A700FD9695 /* Assets.xcassets */,
+				70D6956229596D7500770807 /* Assets */,
 				22CAA4692949B9B600FD9695 /* Entities */,
 				22CAA4432949B6A700FD9695 /* Preview */,
 				70D695602959689400770807 /* Views */,
@@ -79,6 +96,7 @@
 			isa = PBXGroup;
 			children = (
 				22CAA4442949B6A700FD9695 /* Assets.xcassets */,
+				7064274929597AB400060AAB /* NameProvider.swift */,
 			);
 			path = Preview;
 			sourceTree = "<group>";
@@ -86,9 +104,9 @@
 		22CAA4692949B9B600FD9695 /* Entities */ = {
 			isa = PBXGroup;
 			children = (
-				22C6CCCC295440CE000D2D86 /* Place.swift */,
-				70D6955A29584A4F00770807 /* Grid.swift */,
 				70D6955C29584B4200770807 /* Actor.swift */,
+				70D6955A29584A4F00770807 /* Grid.swift */,
+				22C6CCCC295440CE000D2D86 /* Place.swift */,
 				70D6955E29584C8E00770807 /* StrikeThrough.swift */,
 			);
 			path = Entities;
@@ -97,11 +115,23 @@
 		70D695602959689400770807 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				22CAA43F2949B6A400FD9695 /* ContentView.swift */,
+				70D6956529596E4B00770807 /* LobbyView.swift */,
+				70642747295979D200060AAB /* PickView.swift */,
 				22CAA4672949B71600FD9695 /* RenderView.swift */,
 				22C6CCD629558E31000D2D86 /* TapView.swift */,
-				22CAA43F2949B6A400FD9695 /* ContentView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		70D6956229596D7500770807 /* Assets */ = {
+			isa = PBXGroup;
+			children = (
+				22CAA4412949B6A700FD9695 /* Assets.xcassets */,
+				7064274529596FCB00060AAB /* Fonts.swift */,
+				70D6956329596DAF00770807 /* Images.swift */,
+			);
+			path = Assets;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -162,7 +192,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				22CAA4452949B6A700FD9695 /* Assets.xcassets in Resources */,
 				22CAA4422949B6A700FD9695 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -174,15 +203,22 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70D6956629596E4B00770807 /* LobbyView.swift in Sources */,
 				70D6955D29584B4200770807 /* Actor.swift in Sources */,
+				70642748295979D200060AAB /* PickView.swift in Sources */,
 				70D6955F29584C8E00770807 /* StrikeThrough.swift in Sources */,
+				7064274629596FCB00060AAB /* Fonts.swift in Sources */,
 				22CAA4402949B6A400FD9695 /* ContentView.swift in Sources */,
 				22C6CCCD295440CE000D2D86 /* Place.swift in Sources */,
 				22B360FB2952EF57004D49C9 /* GameController.swift in Sources */,
 				70D6955B29584A4F00770807 /* Grid.swift in Sources */,
 				22CAA43E2949B6A400FD9695 /* TicATacRToeApp.swift in Sources */,
 				22CAA4682949B71600FD9695 /* RenderView.swift in Sources */,
+				70B6C787295C0FD500FAB5C6 /* BroadcastController.swift in Sources */,
+				70B7A5B9295B6C69006A7D20 /* InterruptionController.swift in Sources */,
 				22C6CCD729558E31000D2D86 /* TapView.swift in Sources */,
+				70D6956429596DAF00770807 /* Images.swift in Sources */,
+				7064274A29597AB400060AAB /* NameProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -311,13 +347,17 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = TicATacRToe/Preview;
+				DEVELOPMENT_TEAM = E6YTGU5HSG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_FILE = TicATacRToe/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Eita nois";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -339,13 +379,17 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = TicATacRToe/Preview;
+				DEVELOPMENT_TEAM = E6YTGU5HSG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_FILE = TicATacRToe/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Eita nois";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
