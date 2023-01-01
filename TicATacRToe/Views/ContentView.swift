@@ -16,22 +16,69 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             threeDeeArea
+            hud
             interruptionBackground
             lobby
         }
         .alertHandler()
+
     }
 
-    var threeDeeArea: some View {
-        Group {
-            RenderView()
-                .ignoresSafeArea()
+    private var hud: some View {
+        VStack(spacing: 8) {
+            Text("Floating Tic Tac Toe")
+                .font(.appTitle)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .background(Color.black)
 
-            TapView()
+            ZStack {
+                HStack {
+                    SwiftUI.Grid(alignment: .leading, verticalSpacing: 8) {
+                        GridRow {
+                            Text("My Score:")
+                                .font(.appDefault)
+                                .foregroundColor(.white)
+                            Text("\(self.gameController.result.me)")
+                                .font(.appDefault)
+                                .foregroundColor(.white)
+                        }
+                        GridRow {
+                            Text("Opponent's:")
+                                .font(.appDefault)
+                                .foregroundColor(.white)
+                            Text("\(self.gameController.result.opponent)")
+                                .font(.appDefault)
+                                .foregroundColor(.white)
+                        }
+                    }
+
+                    Spacer()
+                }
+
+                Text(self.gameController.myAvatar.rawValue)
+                    .font(.avatar)
+                    .fontWeight(.bold)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+            }
+
+            Spacer()
         }
     }
 
-    var interruptionBackground: some View {
+    private var lobby: some View {
+        VStack {
+            Spacer()
+            
+            if !self.gameController.isGameSetUp {
+                LobbyView()
+            }
+        }
+    }
+
+    private var interruptionBackground: some View {
         Group {
             if self.interruptionController.isInteractionBlocked {
                 Rectangle()
@@ -41,13 +88,12 @@ struct ContentView: View {
         }
     }
 
-    var lobby: some View {
-        VStack {
-            Spacer()
-            
-            if !self.gameController.isGameSetUp {
-                LobbyView()
-            }
+    private var threeDeeArea: some View {
+        Group {
+            RenderView()
+                .ignoresSafeArea()
+
+            TapView()
         }
     }
 }

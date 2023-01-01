@@ -16,7 +16,6 @@ enum RPC: Codable {
 
     case gridMoved(SIMD3<Float>)
     case gridPositionDefined(SIMD3<Float>)
-    case opponentAvatarDefined(Actor.Avatar)
     case opponentPlaced(Place.Position)
     case matchEnded
 
@@ -32,19 +31,13 @@ enum RPC: Codable {
                 let position = try decoder.decode(SIMD3<Float>.self)
                 self = .gridPositionDefined(position)
             case 2:
-                let rawAvatar = try decoder.decode(String.self)
-                guard let avatar = Actor.Avatar(rawValue: rawAvatar) else {
-                    throw Error.badAvatarChoice
-                }
-                self = .opponentAvatarDefined(avatar)
-            case 3:
                 let rawPosition = try decoder.decode(Int.self)
                 guard let position = Place.Position(rawValue: rawPosition) else {
                     throw Error.badPositionChoice
                 }
                 self = .opponentPlaced(position)
 
-            case 4:
+            case 3:
                 self = .matchEnded
             default:
                 throw Error.badCommand
@@ -57,12 +50,10 @@ enum RPC: Codable {
                 return 0
             case .gridPositionDefined:
                 return 1
-            case .opponentAvatarDefined:
-                return 2
             case .opponentPlaced:
-                return 3
+                return 2
             case .matchEnded:
-                return 4
+                return 3
         }
     }
 
@@ -76,8 +67,6 @@ enum RPC: Codable {
                 try encoder.encode(position)
             case let .gridPositionDefined(position):
                 try encoder.encode(position)
-            case let .opponentAvatarDefined(avatar):
-                try encoder.encode(avatar.rawValue)
             case let .opponentPlaced(position):
                 try encoder.encode(position.rawValue)
             case .matchEnded:

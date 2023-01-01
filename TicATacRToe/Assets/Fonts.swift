@@ -10,6 +10,10 @@ import SwiftUI
 extension Font {
     private static var americanTypewriter: String { "American Typewriter" }
 
+    static var avatar: Font {
+        .custom(americanTypewriter, size: 70)
+    }
+
     static var appDefault: Font {
         .custom(americanTypewriter, size: 14)
     }

@@ -27,6 +27,11 @@ protocol GameControllerBroadcastDelegate: AnyObject {
 }
 
 final class GameController: ObservableObject {
+    struct Wins {
+        var me: UInt = 0
+        var opponent: UInt = 0
+    }
+
     weak var broadcastDelegate: GameControllerBroadcastDelegate?
     weak var interruptionDelegate: GameControllerInterruptionDelegate?
     weak var sceneDelegate: GameControllerSceneDelegate?
@@ -42,11 +47,16 @@ final class GameController: ObservableObject {
     }
 
     @MainActor @Published private(set) var currentAvatar = Actor.Avatar.cross
+    @MainActor @Published private(set) var myAvatar = Actor.Avatar.cross
+    @MainActor @Published private(set) var result = Wins()
 
     private var state = [Actor.Avatar.cross: Set<Place.Position>(), Actor.Avatar.circle: Set<Place.Position>()]
 
     func handleTap(at point: CGPoint) {
         Task { @MainActor in
+            guard self.currentAvatar == self.myAvatar else {
+                return
+            }
             if let placeNode = self.sceneDelegate?.queryPlace(at: point) {
                 self.fill(place: placeNode)
                 self.broadcastDelegate?.send(command: .opponentPlaced(placeNode.place), reliable: true)
@@ -89,10 +99,14 @@ final class GameController: ObservableObject {
         }
 
         if hasVictory {
-            Task {
-                try await Task.sleep(for: .seconds(2))
-                self.sceneDelegate?.makeNewGrid()
+            if self.currentAvatar == self.myAvatar {
+                self.result.me += 1
+            } else {
+                self.result.opponent += 1
             }
+
+            self.myAvatar.toggle()
+            self.sceneDelegate?.makeNewGrid()
         }
     }
 
@@ -136,6 +150,17 @@ final class GameController: ObservableObject {
 }
 
 extension GameController: BroadcastControllerGameDelegate {
+    func didConnect(isHost: Bool) {
+        Task { @MainActor in
+            self.sceneDelegate?.makeNewGrid()
+
+            if isHost {
+                self.defineGridPosition()
+                self.myAvatar.toggle()
+            }
+        }
+    }
+
     func receive(command: RPC) {
         switch command {
             case let .opponentPlaced(position):
@@ -166,15 +191,7 @@ extension GameController: BroadcastControllerGameDelegate {
         }
     }
 
-    func didConnect(isHost: Bool) {
-        Task { @MainActor in
-            self.sceneDelegate?.makeNewGrid()
 
-            if isHost {
-                self.defineGridPosition()
-            }
-        }
-    }
 }
 
 private extension Set where Element == Place.Position {
