@@ -8,55 +8,56 @@
 import SceneKit
 
 final class Grid: SCNNode {
+    let topLeftPlaceNode = Place(.topLeft)
+    let topPlaceNode = Place(.top)
+    let topRightPlaceNode = Place(.topRight)
+    let leftPlaceNode = Place(.left)
+    let centrePlaceNode = Place(.centre)
+    let rightPlaceNode = Place(.right)
+    let bottomLeftPlaceNode = Place(.bottomLeft)
+    let bottomPlaceNode = Place(.bottom)
+    let bottomRightPlaceNode = Place(.bottomRight)
+
     override init() {
         super.init()
 
         let placePosition: Float = 0.34
 
         // top left placement
-        let topLeftPlaceNode = Place(.topLeft)
-        topLeftPlaceNode.position = SCNVector3(x: -placePosition, y: placePosition, z: 0)
-        self.addChildNode(topLeftPlaceNode)
+        self.topLeftPlaceNode.position = SCNVector3(x: -placePosition, y: placePosition, z: 0)
+        self.addChildNode(self.topLeftPlaceNode)
 
         // top placement
-        let topPlaceNode = Place(.top)
-        topPlaceNode.position = SCNVector3(x: 0, y: placePosition, z: 0)
-        self.addChildNode(topPlaceNode)
+        self.topPlaceNode.position = SCNVector3(x: 0, y: placePosition, z: 0)
+        self.addChildNode(self.topPlaceNode)
 
         // top right placement
-        let topRightPlaceNode = Place(.topRight)
-        topRightPlaceNode.position = SCNVector3(x: placePosition, y: placePosition, z: 0)
-        self.addChildNode(topRightPlaceNode)
+        self.topRightPlaceNode.position = SCNVector3(x: placePosition, y: placePosition, z: 0)
+        self.addChildNode(self.topRightPlaceNode)
 
         // left placement
-        let leftPlaceNode = Place(.left)
-        leftPlaceNode.position = SCNVector3(x: -placePosition, y: 0, z: 0)
-        self.addChildNode(leftPlaceNode)
+        self.leftPlaceNode.position = SCNVector3(x: -placePosition, y: 0, z: 0)
+        self.addChildNode(self.leftPlaceNode)
 
         // centre placement
-        let centrePlaceNode = Place(.centre)
-        centrePlaceNode.position = SCNVector3(x: 0, y: 0, z: 0)
-        self.addChildNode(centrePlaceNode)
+        self.centrePlaceNode.position = SCNVector3(x: 0, y: 0, z: 0)
+        self.addChildNode(self.centrePlaceNode)
 
         // right placement
-        let rightPlaceNode = Place(.right)
-        rightPlaceNode.position = SCNVector3(x: placePosition, y: 0, z: 0)
-        self.addChildNode(rightPlaceNode)
+        self.rightPlaceNode.position = SCNVector3(x: placePosition, y: 0, z: 0)
+        self.addChildNode(self.rightPlaceNode)
 
         // bottom left placement
-        let bottomLeftPlaceNode = Place(.bottomLeft)
-        bottomLeftPlaceNode.position = SCNVector3(x: -placePosition, y: -placePosition, z: 0)
-        self.addChildNode(bottomLeftPlaceNode)
+        self.bottomLeftPlaceNode.position = SCNVector3(x: -placePosition, y: -placePosition, z: 0)
+        self.addChildNode(self.bottomLeftPlaceNode)
 
         // bottom placement
-        let bottomPlaceNode = Place(.bottom)
-        bottomPlaceNode.position = SCNVector3(x: 0, y: -placePosition, z: 0)
-        self.addChildNode(bottomPlaceNode)
+        self.bottomPlaceNode.position = SCNVector3(x: 0, y: -placePosition, z: 0)
+        self.addChildNode(self.bottomPlaceNode)
 
         // bottom right placement
-        let bottomRightPlaceNode = Place(.bottomRight)
-        bottomRightPlaceNode.position = SCNVector3(x: placePosition, y: -placePosition, z: 0)
-        self.addChildNode(bottomRightPlaceNode)
+        self.bottomRightPlaceNode.position = SCNVector3(x: placePosition, y: -placePosition, z: 0)
+        self.addChildNode(self.bottomRightPlaceNode)
 
         let thickness: CGFloat = 0.02
         let length: CGFloat = 1.0

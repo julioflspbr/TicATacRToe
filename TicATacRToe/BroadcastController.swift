@@ -14,10 +14,10 @@ protocol BroadcastControllerAlertDelegate: AnyObject {
 
 protocol BroadcastControllerGameDelegate: AnyObject {
     var isGameSetUp: Bool { get set }
-    func receiveCommand(_ command: RPC)
+    func receive(command: RPC)
 }
 
-final class BroadcastController: NSObject, ObservableObject {
+final class BroadcastController: NSObject, ObservableObject, GameControllerBroadcastDelegate {
     private static let serviceType = "tic-a-tac-r-toe"
 
     weak var alertDelegate: BroadcastControllerAlertDelegate?
@@ -51,7 +51,7 @@ final class BroadcastController: NSObject, ObservableObject {
     private var peerID: MCPeerID?
     private var session: MCSession?
 
-    func send(command: RPC, mode: MCSessionSendDataMode = .reliable) {
+    func send(command: RPC, reliable: Bool) {
         do {
             guard let session, let opponent else {
                 return
@@ -59,7 +59,7 @@ final class BroadcastController: NSObject, ObservableObject {
 
             let encoder = JSONEncoder()
             let encoded = try encoder.encode(command)
-            try session.send(encoded, toPeers: [opponent], with: mode)
+            try session.send(encoded, toPeers: [opponent], with: reliable ? .reliable : .unreliable)
         } catch {
             Task { @MainActor in
                 self.alertDelegate?.handleError(error)
@@ -223,7 +223,7 @@ extension BroadcastController: MCSessionDelegate {
         do {
             let decoder = JSONDecoder()
             let command = try decoder.decode(RPC.self, from: data)
-            self.gameDelegate?.receiveCommand(command)
+            self.gameDelegate?.receive(command: command)
         } catch {
             Task { @MainActor in
                 self.alertDelegate?.handleError(error)

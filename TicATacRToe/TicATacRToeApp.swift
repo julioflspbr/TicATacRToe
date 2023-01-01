@@ -15,6 +15,7 @@ struct TicATacRToeApp: App {
 
     init() {
         self.gameController.interruptionDelegate = self.interruptionController
+        self.gameController.broadcastDelegate = self.broadcastController
         self.broadcastController.alertDelegate = self.interruptionController
         self.broadcastController.gameDelegate = self.gameController
     }

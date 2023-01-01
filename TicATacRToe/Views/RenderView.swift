@@ -36,11 +36,16 @@ struct RenderView: UIViewRepresentable {
 
 final class SceneController: GameControllerSceneDelegate {
     weak var sceneView: SCNView?
+
     let scene: SCNScene
+
+    private let grid: Grid
 
     init() {
         self.scene = SCNScene()
-        self.scene.rootNode.addChildNode(Grid())
+
+        self.grid = Grid()
+        self.scene.rootNode.addChildNode(self.grid)
 
         let camera = SCNCamera()
         camera.automaticallyAdjustsZRange = true
@@ -49,6 +54,29 @@ final class SceneController: GameControllerSceneDelegate {
         cameraNode.position.z = 2.5
         cameraNode.camera = camera
         self.scene.rootNode.addChildNode(cameraNode)
+    }
+
+    func place(for place: Place.Position) -> Place {
+        switch place {
+            case .topLeft:
+                return self.grid.topLeftPlaceNode
+            case .top:
+                return self.grid.topPlaceNode
+            case .topRight:
+                return self.grid.topRightPlaceNode
+            case .left:
+                return self.grid.leftPlaceNode
+            case .centre:
+                return self.grid.centrePlaceNode
+            case .right:
+                return self.grid.rightPlaceNode
+            case .bottomLeft:
+                return self.grid.bottomLeftPlaceNode
+            case .bottom:
+                return self.grid.bottomPlaceNode
+            case .bottomRight:
+                return self.grid.bottomRightPlaceNode
+        }
     }
 
     func queryPlace(at point: CGPoint) -> Place? {
