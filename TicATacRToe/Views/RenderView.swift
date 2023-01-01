@@ -39,9 +39,9 @@ struct RenderView: UIViewRepresentable {
         case gridNotDefined
     }
 
-    weak var sceneView: SCNView?
-
     let scene: SCNScene
+
+    weak var sceneView: SCNView?
 
     private var grid: Grid?
 

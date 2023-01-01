@@ -8,18 +8,18 @@
 import SwiftUI
 import SceneKit
 
-@MainActor protocol GameControllerSceneDelegate: AnyObject {
-    func defineGrid(at: SIMD3<Float>) throws
-    func makeNewGrid()
-    func place(for: Place.Position) throws -> Place
-    func queryPlace(at: CGPoint) -> Place?
-    func strikeThrough(_: StrikeThrough.StrikeType) -> Void
+protocol GameControllerSceneDelegate: AnyObject {
+    @MainActor func defineGrid(at: SIMD3<Float>) throws
+    @MainActor func makeNewGrid()
+    @MainActor func place(for: Place.Position) throws -> Place
+    @MainActor func queryPlace(at: CGPoint) -> Place?
+    @MainActor func strikeThrough(_: StrikeThrough.StrikeType) -> Void
 }
 
 protocol GameControllerInterruptionDelegate: AnyObject {
-    func allow3DInteraction()
-    func deny3DInteraction()
-    func handleError(_ error: Error)
+    @MainActor func allow3DInteraction()
+    @MainActor func deny3DInteraction()
+    @MainActor func handleError(_ error: Error)
 }
 
 protocol GameControllerBroadcastDelegate: AnyObject {
@@ -31,7 +31,7 @@ final class GameController: ObservableObject {
     weak var interruptionDelegate: GameControllerInterruptionDelegate?
     weak var sceneDelegate: GameControllerSceneDelegate?
 
-    @Published var isGameSetUp = false {
+    @MainActor @Published var isGameSetUp = false {
         didSet {
             if self.isGameSetUp {
                 self.interruptionDelegate?.allow3DInteraction()
@@ -41,7 +41,7 @@ final class GameController: ObservableObject {
         }
     }
 
-    @Published private(set) var currentAvatar = Actor.Avatar.cross
+    @MainActor @Published private(set) var currentAvatar = Actor.Avatar.cross
 
     private var state = [Actor.Avatar.cross: Set<Place.Position>(), Actor.Avatar.circle: Set<Place.Position>()]
 

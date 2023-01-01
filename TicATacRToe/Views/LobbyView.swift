@@ -33,9 +33,9 @@ struct LobbyView: View {
                     Text("opponent:")
                         .font(.appDefault)
                         .fontWeight(.bold)
-                    Text(self.broadcastController.opponent?.displayName ?? "pick opponent below")
+                    Text(self.broadcastController.opponentNickname ?? "pick opponent below")
                         .font(.appDefault)
-                        .foregroundColor(self.broadcastController.opponent == nil ? .secondary.opacity(0.45) : .primary)
+                        .foregroundColor(self.broadcastController.opponentNickname == nil ? .secondary.opacity(0.45) : .primary)
                 }
             }
             .padding(.horizontal)
