@@ -64,7 +64,7 @@ final class GameController: ObservableObject {
         }
     }
 
-    @MainActor private func checkVictoryCondition() {
+    @MainActor private func checkGameEnd() {
         guard let state = self.state[self.currentAvatar] else {
             return
         }
@@ -104,9 +104,22 @@ final class GameController: ObservableObject {
             } else {
                 self.result.opponent += 1
             }
+        }
 
+        let allPlacesFilled = 9
+        let filledWithCircles = self.state[.circle]?.count ?? 0
+        let filledWithCrosses = self.state[.cross]?.count ?? 0
+        if hasVictory || filledWithCircles + filledWithCrosses == allPlacesFilled {
+            self.state[.cross]?.removeAll()
+            self.state[.circle]?.removeAll()
+            self.currentAvatar = .cross
             self.myAvatar.toggle()
             self.sceneDelegate?.makeNewGrid()
+            if self.myAvatar == .cross {
+                self.defineGridPosition()
+            }
+        } else {
+            self.currentAvatar.toggle()
         }
     }
 
@@ -141,8 +154,7 @@ final class GameController: ObservableObject {
         do {
             try place.fill(with: self.currentAvatar)
             self.state[self.currentAvatar]?.insert(place.place)
-            self.checkVictoryCondition()
-            self.currentAvatar.toggle()
+            self.checkGameEnd()
         } catch {
             self.interruptionDelegate?.handleError(error)
         }
@@ -156,6 +168,7 @@ extension GameController: BroadcastControllerGameDelegate {
 
             if isHost {
                 self.defineGridPosition()
+            } else {
                 self.myAvatar.toggle()
             }
         }
