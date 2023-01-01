@@ -19,7 +19,7 @@ protocol GameControllerInterruptionDelegate: AnyObject {
     func handleError(_ error: Error)
 }
 
-final class GameController: ObservableObject, BroadcastControllerGameSetupDelegate {
+final class GameController: ObservableObject, BroadcastControllerGameDelegate {
     weak var sceneDelegate: GameControllerSceneDelegate?
     weak var interruptionDelegate: GameControllerInterruptionDelegate?
 
@@ -50,6 +50,10 @@ final class GameController: ObservableObject, BroadcastControllerGameSetupDelega
         } catch {
             self.interruptionDelegate?.handleError(error)
         }
+    }
+
+    func receiveCommand(_ command: RPC) {
+        // TODO: implement RPCs
     }
 
     private func checkVictoryCondition() {

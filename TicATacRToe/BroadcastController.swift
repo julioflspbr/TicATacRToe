@@ -9,17 +9,19 @@ import MultipeerConnectivity
 
 protocol BroadcastControllerAlertDelegate: AnyObject {
     @MainActor func showAlert(title: String, description: String, actions: [InterruptingAlert.Action])
+    @MainActor func handleError(_ error: Error)
 }
 
-protocol BroadcastControllerGameSetupDelegate: AnyObject {
+protocol BroadcastControllerGameDelegate: AnyObject {
     var isGameSetUp: Bool { get set }
+    func receiveCommand(_ command: RPC)
 }
 
 final class BroadcastController: NSObject, ObservableObject {
     private static let serviceType = "tic-a-tac-r-toe"
 
     weak var alertDelegate: BroadcastControllerAlertDelegate?
-    weak var gameSetupDelegate: BroadcastControllerGameSetupDelegate?
+    weak var gameDelegate: BroadcastControllerGameDelegate?
 
     @Published var nickname = "" {
         didSet {
@@ -39,7 +41,7 @@ final class BroadcastController: NSObject, ObservableObject {
     @Published private(set) var availablePlayers = [String : MCPeerID]()
     @Published private(set) var connectionState = MCSessionState.notConnected {
         didSet {
-            self.gameSetupDelegate?.isGameSetUp = (self.connectionState == .connected && self.opponent != nil && self.nickname.count >= 3)
+            self.gameDelegate?.isGameSetUp = (self.connectionState == .connected && self.opponent != nil && self.nickname.count >= 3)
         }
     }
 
@@ -48,6 +50,22 @@ final class BroadcastController: NSObject, ObservableObject {
     private var connectionDebouncer: Task<Void, Never>?
     private var peerID: MCPeerID?
     private var session: MCSession?
+
+    func send(command: RPC, mode: MCSessionSendDataMode = .reliable) {
+        do {
+            guard let session, let opponent else {
+                return
+            }
+
+            let encoder = JSONEncoder()
+            let encoded = try encoder.encode(command)
+            try session.send(encoded, toPeers: [opponent], with: mode)
+        } catch {
+            Task { @MainActor in
+                self.alertDelegate?.handleError(error)
+            }
+        }
+    }
 
     private func broadcast() {
         self.connectionDebouncer?.cancel()
@@ -149,8 +167,9 @@ extension BroadcastController: MCNearbyServiceBrowserDelegate {
     }
 
     func browser(_ browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: Error) {
-        // TODO: handle error
-        print("LALA browser error: \(error)")
+        Task { @MainActor in
+            self.alertDelegate?.handleError(error)
+        }
     }
 }
 
@@ -176,8 +195,9 @@ extension BroadcastController: MCNearbyServiceAdvertiserDelegate {
     }
 
     func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: Error) {
-        // TODO: handle error
-        print("LALA advertiser error: \(error)")
+        Task { @MainActor in
+            self.alertDelegate?.handleError(error)
+        }
     }
 }
 
@@ -196,7 +216,19 @@ extension BroadcastController: MCSessionDelegate {
     }
 
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
-        // TODO: IPC comms
+        guard peerID == self.opponent else {
+            return
+        }
+
+        do {
+            let decoder = JSONDecoder()
+            let command = try decoder.decode(RPC.self, from: data)
+            self.gameDelegate?.receiveCommand(command)
+        } catch {
+            Task { @MainActor in
+                self.alertDelegate?.handleError(error)
+            }
+        }
     }
 
     func session(_ session: MCSession, didReceive stream: InputStream, withName streamName: String, fromPeer peerID: MCPeerID) {

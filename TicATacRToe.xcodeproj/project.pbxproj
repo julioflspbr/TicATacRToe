@@ -18,6 +18,7 @@
 		70642748295979D200060AAB /* PickView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70642747295979D200060AAB /* PickView.swift */; };
 		7064274A29597AB400060AAB /* NameProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7064274929597AB400060AAB /* NameProvider.swift */; };
 		70B6C787295C0FD500FAB5C6 /* BroadcastController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B6C786295C0FD500FAB5C6 /* BroadcastController.swift */; };
+		70B6C78D29618A1300FAB5C6 /* RPC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B6C78C29618A1300FAB5C6 /* RPC.swift */; };
 		70B7A5B9295B6C69006A7D20 /* InterruptionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B7A5B8295B6C69006A7D20 /* InterruptionController.swift */; };
 		70D6955B29584A4F00770807 /* Grid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D6955A29584A4F00770807 /* Grid.swift */; };
 		70D6955D29584B4200770807 /* Actor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D6955C29584B4200770807 /* Actor.swift */; };
@@ -41,6 +42,7 @@
 		7064274929597AB400060AAB /* NameProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NameProvider.swift; sourceTree = "<group>"; };
 		70B6C786295C0FD500FAB5C6 /* BroadcastController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BroadcastController.swift; sourceTree = "<group>"; };
 		70B6C788295DA20600FAB5C6 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		70B6C78C29618A1300FAB5C6 /* RPC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RPC.swift; sourceTree = "<group>"; };
 		70B7A5B8295B6C69006A7D20 /* InterruptionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterruptionController.swift; sourceTree = "<group>"; };
 		70D6955A29584A4F00770807 /* Grid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Grid.swift; sourceTree = "<group>"; };
 		70D6955C29584B4200770807 /* Actor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Actor.swift; sourceTree = "<group>"; };
@@ -83,6 +85,7 @@
 				70B6C786295C0FD500FAB5C6 /* BroadcastController.swift */,
 				22B360FA2952EF57004D49C9 /* GameController.swift */,
 				70B7A5B8295B6C69006A7D20 /* InterruptionController.swift */,
+				70B6C78C29618A1300FAB5C6 /* RPC.swift */,
 				22CAA43D2949B6A400FD9695 /* TicATacRToeApp.swift */,
 				70D6956229596D7500770807 /* Assets */,
 				22CAA4692949B9B600FD9695 /* Entities */,
@@ -205,6 +208,7 @@
 			files = (
 				70D6956629596E4B00770807 /* LobbyView.swift in Sources */,
 				70D6955D29584B4200770807 /* Actor.swift in Sources */,
+				70B6C78D29618A1300FAB5C6 /* RPC.swift in Sources */,
 				70642748295979D200060AAB /* PickView.swift in Sources */,
 				70D6955F29584C8E00770807 /* StrikeThrough.swift in Sources */,
 				7064274629596FCB00060AAB /* Fonts.swift in Sources */,
