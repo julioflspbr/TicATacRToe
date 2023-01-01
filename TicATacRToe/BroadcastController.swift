@@ -15,6 +15,7 @@ protocol BroadcastControllerAlertDelegate: AnyObject {
 protocol BroadcastControllerGameDelegate: AnyObject {
     var isGameSetUp: Bool { get set }
     func receive(command: RPC)
+    func didConnect(isHost: Bool)
 }
 
 final class BroadcastController: NSObject, ObservableObject, GameControllerBroadcastDelegate {
@@ -23,7 +24,7 @@ final class BroadcastController: NSObject, ObservableObject, GameControllerBroad
     weak var alertDelegate: BroadcastControllerAlertDelegate?
     weak var gameDelegate: BroadcastControllerGameDelegate?
 
-    @Published var nickname = "" {
+    @MainActor @Published var nickname = "" {
         didSet {
             if self.nickname != oldValue {
                 self.broadcast()
@@ -38,16 +39,19 @@ final class BroadcastController: NSObject, ObservableObject, GameControllerBroad
         }
     }
 
-    @Published private(set) var availablePlayers = [String : MCPeerID]()
+    @MainActor @Published private(set) var availablePlayers = [String : MCPeerID]()
     @Published private(set) var connectionState = MCSessionState.notConnected {
         didSet {
-            self.gameDelegate?.isGameSetUp = (self.connectionState == .connected && self.opponent != nil && self.nickname.count >= 3)
+            Task { @MainActor in
+                self.gameDelegate?.isGameSetUp = (self.connectionState == .connected && self.opponent != nil && self.nickname.count >= 3)
+            }
         }
     }
 
     private var advertiser: MCNearbyServiceAdvertiser?
     private var browser: MCNearbyServiceBrowser?
     private var connectionDebouncer: Task<Void, Never>?
+    private var isHost: Bool = true
     private var peerID: MCPeerID?
     private var session: MCSession?
 
@@ -77,24 +81,20 @@ final class BroadcastController: NSObject, ObservableObject, GameControllerBroad
                 return
             }
 
-            guard let self else {
-                return
-            }
+            self?.advertiser?.stopAdvertisingPeer()
+            self?.browser?.stopBrowsingForPeers()
+            self?.session?.disconnect()
 
-            self.advertiser?.stopAdvertisingPeer()
-            self.browser?.stopBrowsingForPeers()
-            self.session?.disconnect()
-
-            guard self.nickname.count >= 3 else {
-                self.advertiser = nil
-                self.browser = nil
-                self.session = nil
-                self.peerID = nil
+            guard let nickname = await self?.nickname, nickname.count >= 3 else {
+                self?.advertiser = nil
+                self?.browser = nil
+                self?.session = nil
+                self?.peerID = nil
 
                 return
             }
 
-            let peerID = MCPeerID(displayName: self.nickname)
+            let peerID = MCPeerID(displayName: nickname)
 
             let session = MCSession(peer: peerID, securityIdentity: nil, encryptionPreference: .none)
             session.delegate = self
@@ -107,11 +107,12 @@ final class BroadcastController: NSObject, ObservableObject, GameControllerBroad
             advertiser.delegate = self
             advertiser.startAdvertisingPeer()
 
-            self.peerID = peerID
-            self.session = session
-            self.browser = browser
-            self.advertiser = advertiser
-            self.connectionDebouncer = nil
+            self?.peerID = peerID
+            self?.session = session
+            self?.browser = browser
+            self?.advertiser = advertiser
+            self?.connectionDebouncer = nil
+            self?.isHost = true
         }
     }
 
@@ -156,11 +157,15 @@ extension BroadcastController: MCNearbyServiceBrowserDelegate {
         guard peerID.displayName != self.peerID?.displayName else {
             return
         }
-        self.availablePlayers[peerID.displayName] = peerID
+        Task { @MainActor in
+            self.availablePlayers[peerID.displayName] = peerID
+        }
     }
 
     func browser(_ browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
-        self.availablePlayers.removeValue(forKey: peerID.displayName)
+        Task { @MainActor in
+            self.availablePlayers.removeValue(forKey: peerID.displayName)
+        }
         if self.opponent == peerID {
             self.opponent = nil
         }
@@ -187,9 +192,11 @@ extension BroadcastController: MCNearbyServiceAdvertiserDelegate {
         Task { @MainActor in
             if await self.handleInvitation(from: peerID) {
                 invitationHandler(true, session)
+                self.isHost = false
             } else {
                 invitationHandler(false, session)
                 self.opponent = nil
+                self.isHost = true
             }
         }
     }
@@ -210,6 +217,7 @@ extension BroadcastController: MCSessionDelegate {
 
         if state == .connected {
             self.finishDiscovery()
+            self.gameDelegate?.didConnect(isHost: self.isHost)
         } else if state == .notConnected && (self.advertiser == nil || self.browser == nil) {
             self.broadcast()
         }

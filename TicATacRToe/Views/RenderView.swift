@@ -34,18 +34,19 @@ struct RenderView: UIViewRepresentable {
     }
 }
 
-final class SceneController: GameControllerSceneDelegate {
+@MainActor final class SceneController: GameControllerSceneDelegate {
+    enum Error: Swift.Error {
+        case gridNotDefined
+    }
+
     weak var sceneView: SCNView?
 
     let scene: SCNScene
 
-    private let grid: Grid
+    private var grid: Grid?
 
     init() {
         self.scene = SCNScene()
-
-        self.grid = Grid()
-        self.scene.rootNode.addChildNode(self.grid)
 
         let camera = SCNCamera()
         camera.automaticallyAdjustsZRange = true
@@ -56,26 +57,44 @@ final class SceneController: GameControllerSceneDelegate {
         self.scene.rootNode.addChildNode(cameraNode)
     }
 
-    func place(for place: Place.Position) -> Place {
+    func defineGrid(at: SIMD3<Float>) throws {
+        // disregard *position* on simulator
+        guard let grid else {
+            throw Error.gridNotDefined
+        }
+        self.scene.rootNode.addChildNode(grid)
+    }
+
+    func makeNewGrid() {
+        self.grid?.removeFromParentNode()
+        let grid = Grid()
+        self.grid = grid
+    }
+
+    func place(for place: Place.Position) throws -> Place {
+        guard let grid else {
+            throw Error.gridNotDefined
+        }
+
         switch place {
             case .topLeft:
-                return self.grid.topLeftPlaceNode
+                return grid.topLeftPlaceNode
             case .top:
-                return self.grid.topPlaceNode
+                return grid.topPlaceNode
             case .topRight:
-                return self.grid.topRightPlaceNode
+                return grid.topRightPlaceNode
             case .left:
-                return self.grid.leftPlaceNode
+                return grid.leftPlaceNode
             case .centre:
-                return self.grid.centrePlaceNode
+                return grid.centrePlaceNode
             case .right:
-                return self.grid.rightPlaceNode
+                return grid.rightPlaceNode
             case .bottomLeft:
-                return self.grid.bottomLeftPlaceNode
+                return grid.bottomLeftPlaceNode
             case .bottom:
-                return self.grid.bottomPlaceNode
+                return grid.bottomPlaceNode
             case .bottomRight:
-                return self.grid.bottomRightPlaceNode
+                return grid.bottomRightPlaceNode
         }
     }
 
@@ -112,6 +131,6 @@ final class SceneController: GameControllerSceneDelegate {
                 strikeThrough.position = SCNVector3(0.0, 0.0, 0.0)
         }
 
-        self.scene.rootNode.addChildNode(strikeThrough)
+        self.grid?.addChildNode(strikeThrough)
     }
 }
