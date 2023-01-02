@@ -7,18 +7,18 @@
 
 import SwiftUI
 
-final class InterruptionController: ObservableObject, GameControllerInterruptionDelegate, BroadcastControllerAlertDelegate {
-    @Published fileprivate var isDisplayingAlert: Bool = false {
+final class InterruptionController: ObservableObject, GameControllerInterruptionDelegate, BroadcastControllerAlertDelegate, InformationControllerInterruptionDelegate {
+    @MainActor @Published fileprivate var isDisplayingAlert: Bool = false {
         didSet {
             self.alert = (self.is3DInteractionDenied ? self.alert : nil)
         }
     }
 
-    @Published fileprivate private(set) var alert: InterruptingAlert.AlertContent?
+    @MainActor @Published fileprivate private(set) var alert: InterruptingAlert.AlertContent?
 
-    @Published private var is3DInteractionDenied = true
+    @MainActor @Published private var is3DInteractionDenied = true
 
-    var isInteractionBlocked: Bool {
+    @MainActor var isInteractionBlocked: Bool {
         self.isDisplayingAlert || is3DInteractionDenied
     }
 

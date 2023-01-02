@@ -9,8 +9,7 @@ import SwiftUI
 import MultipeerConnectivity
 
 struct ContentView: View {
-    @EnvironmentObject private var gameController: GameController
-    @EnvironmentObject private var broadcastController: BroadcastController
+    @EnvironmentObject private var informationController: InformationController
     @EnvironmentObject private var interruptionController: InterruptionController
 
     var body: some View {
@@ -40,7 +39,7 @@ struct ContentView: View {
                             Text("My Score:")
                                 .font(.appDefault)
                                 .foregroundColor(.white)
-                            Text("\(self.gameController.result.me)")
+                            Text("\(self.informationController.result.me)")
                                 .font(.appDefault)
                                 .foregroundColor(.white)
                         }
@@ -48,7 +47,7 @@ struct ContentView: View {
                             Text("Opponent's:")
                                 .font(.appDefault)
                                 .foregroundColor(.white)
-                            Text("\(self.gameController.result.opponent)")
+                            Text("\(self.informationController.result.opponent)")
                                 .font(.appDefault)
                                 .foregroundColor(.white)
                         }
@@ -57,7 +56,7 @@ struct ContentView: View {
                     Spacer()
                 }
 
-                Text(self.gameController.myAvatar.rawValue)
+                Text(self.informationController.myAvatar.rawValue)
                     .font(.avatar)
                     .fontWeight(.bold)
                     .fontWeight(.bold)
@@ -72,7 +71,7 @@ struct ContentView: View {
         VStack {
             Spacer()
             
-            if !self.gameController.isGameSetUp {
+            if !self.informationController.isLobbySetUp {
                 LobbyView()
             }
         }
@@ -109,7 +108,7 @@ struct ContentView_Previews: PreviewProvider {
         let mockPeerID = MCPeerID(displayName: "mock-peer-id")
         let mockServiceBrowser = MCNearbyServiceBrowser(peer: mockPeerID, serviceType: mockPeerID.displayName)
         for name in NameProvider.provide(amount: 2) {
-            broadcastController.browser(mockServiceBrowser, foundPeer: name, withDiscoveryInfo: nil)
+            broadcastController.browser(mockServiceBrowser, foundPeer: MCPeerID(displayName: name), withDiscoveryInfo: nil)
         }
 
         return ContentView()

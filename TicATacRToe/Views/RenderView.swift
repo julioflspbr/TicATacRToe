@@ -71,7 +71,7 @@ struct RenderView: UIViewRepresentable {
         self.grid = grid
     }
 
-    func place(for place: Place.Position) throws -> Place {
+    func queryPlace(for place: Place.Position) throws -> Place {
         guard let grid else {
             throw Error.gridNotDefined
         }

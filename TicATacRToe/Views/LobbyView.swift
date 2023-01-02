@@ -9,7 +9,7 @@ import SwiftUI
 import MultipeerConnectivity
 
 struct LobbyView: View {
-    @EnvironmentObject private var broadcastController: BroadcastController
+    @EnvironmentObject private var informationController: InformationController
 
     var body: some View {
         VStack {
@@ -22,7 +22,7 @@ struct LobbyView: View {
                         .font(.appDefault)
                         .fontWeight(.bold)
 
-                    TextField("choose nickname", text: $broadcastController.nickname)
+                    TextField("choose nickname", text: $informationController.nickname)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled(true)
                         .font(.appDefault)
@@ -33,14 +33,14 @@ struct LobbyView: View {
                     Text("opponent:")
                         .font(.appDefault)
                         .fontWeight(.bold)
-                    Text(self.broadcastController.opponentNickname ?? "pick opponent below")
+                    Text(self.informationController.opponent.isEmpty ? "pick opponent below" : self.informationController.opponent)
                         .font(.appDefault)
-                        .foregroundColor(self.broadcastController.opponentNickname == nil ? .secondary.opacity(0.45) : .primary)
+                        .foregroundColor(self.informationController.opponent.isEmpty ? .secondary.opacity(0.45) : .primary)
                 }
             }
             .padding(.horizontal)
 
-            PickView(source: Array(self.broadcastController.availablePlayers.values), selected: $broadcastController.opponent)
+            PickView(source: self.informationController.availablePlayers, selected: $informationController.opponent)
                 .frame(minHeight: 60)
                 .padding(.bottom)
         }
@@ -59,7 +59,7 @@ struct LobbyView_Previews: PreviewProvider {
         let mockPeerID = MCPeerID(displayName: "mock-peer-id")
         let mockServiceBrowser = MCNearbyServiceBrowser(peer: mockPeerID, serviceType: mockPeerID.displayName)
         for name in NameProvider.provide(amount: 7) {
-            broadcastController.browser(mockServiceBrowser, foundPeer: name, withDiscoveryInfo: nil)
+            broadcastController.browser(mockServiceBrowser, foundPeer: MCPeerID(displayName: name), withDiscoveryInfo: nil)
         }
 
         return LobbyView()

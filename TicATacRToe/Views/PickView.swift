@@ -6,22 +6,21 @@
 //
 
 import SwiftUI
-import MultipeerConnectivity
 
 struct PickView: View {
-    private let source: [[MCPeerID]]
+    private let source: [[String]]
 
-    @Binding private(set) var selected: MCPeerID?
+    @Binding private(set) var selected: String
 
     @Environment(\.colorScheme) private var colourScheme
 
-    init(source: [MCPeerID], selected: Binding<MCPeerID?>) {
+    init(source: Set<String>, selected: Binding<String>) {
         var flatSource = source
         let lineItemLimit = 4
-        var groupedSource = [[MCPeerID]]()
+        var groupedSource = [[String]]()
 
         while flatSource.count > 0 {
-            var line = [MCPeerID]()
+            var line = [String]()
             while line.count < lineItemLimit && flatSource.count > 0 {
                 line.append(flatSource.removeFirst())
             }
@@ -32,8 +31,8 @@ struct PickView: View {
     }
 
     var body: some View {
-        if let selected {
-            ProgressView(label: { Text("Waiting for \(selected.displayName)'s response") })
+        if !self.selected.isEmpty {
+            ProgressView(label: { Text("Waiting for \(selected)'s response") })
                 .progressViewStyle(.circular)
                 .font(.appDefault)
         } else if self.source.isEmpty {
@@ -85,11 +84,11 @@ private struct PickButton: View {
     @State private(set) var foreground: Color
     @State private(set) var background: Color
 
-    let item: MCPeerID
-    let select: (MCPeerID) -> Void
+    let item: String
+    let select: (String) -> Void
 
     var body: some View {
-        Button(self.item.displayName) {
+        Button(self.item) {
             select(self.item)
         }
         .font(.appDefault)
@@ -105,6 +104,6 @@ private struct PickButton: View {
 
 struct PickView_Preview: PreviewProvider {
     static var previews: some View {
-        PickView(source: NameProvider.provide(amount: 20), selected: .constant(nil))
+        PickView(source: NameProvider.provide(amount: 20), selected: .constant(""))
     }
 }

@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import MultipeerConnectivity
 
 struct NameProvider {
     private static let source = [
@@ -20,10 +19,10 @@ struct NameProvider {
         "Hensley", "Grace", "Green", "Ameer", "Leon", "Archie", "Barton", "Sumaya", "Marks", "Suzanne", "Hooper"
     ]
 
-    static func provide(amount: Int) -> [MCPeerID] {
+    static func provide(amount: Int) -> Set<String> {
         let amount = min(amount, 50)
         var usedIndices = Set<Int>()
-        var names = [MCPeerID]()
+        var names = Set<String>()
 
         while names.count < amount {
             var currentIndex = -1
@@ -31,7 +30,7 @@ struct NameProvider {
                 currentIndex = Int(arc4random_uniform(UInt32(source.count)))
             } while usedIndices.contains(currentIndex)
 
-            names.append(MCPeerID(displayName: source[currentIndex].lowercased()))
+            names.insert(source[currentIndex].lowercased())
             usedIndices.insert(currentIndex)
         }
 

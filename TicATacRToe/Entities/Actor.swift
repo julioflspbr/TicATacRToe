@@ -7,7 +7,7 @@
 
 import SceneKit
 
-final class Actor: SCNNode {
+@MainActor final class Actor: SCNNode {
     enum Avatar: String, Hashable {
         case cross = "✕"
         case circle = "◯"

@@ -7,7 +7,7 @@
 
 import SceneKit
 
-final class Grid: SCNNode {
+@MainActor final class Grid: SCNNode {
     let topLeftPlaceNode = Place(.topLeft)
     let topPlaceNode = Place(.top)
     let topRightPlaceNode = Place(.topRight)
