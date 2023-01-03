@@ -9,6 +9,9 @@ import SwiftUI
 import SceneKit
 
 protocol GameControllerBroadcastDelegate: AnyObject {
+    var playerName: String { get }
+    var opponentName: String { get }
+    func disconnect()
     func send(command: RPC, reliable: Bool)
 }
 
@@ -23,10 +26,12 @@ protocol GameControllerInterruptionDelegate: AnyObject {
     @MainActor func allow3DInteraction()
     @MainActor func deny3DInteraction()
     @MainActor func handleError(_ error: Error)
+    @MainActor func showAlert(title: String, description: String, actions: [InterruptingAlert.Action])
 }
 
 protocol GameControllerSceneDelegate: AnyObject {
     @MainActor func defineGrid(at: SIMD3<Float>) throws
+    @MainActor func deleteAllGrids()
     @MainActor func makeNewGrid()
     @MainActor func queryPlace(for: Place.Position) throws -> Place
     @MainActor func queryPlace(at: CGPoint) -> Place?
@@ -77,6 +82,24 @@ final class GameController: ObservableObject {
 
     private var state = [Actor.Avatar.cross: Set<Place.Position>(), Actor.Avatar.circle: Set<Place.Position>()]
 
+    func alertRejection(opponent: String, recover: (@escaping () -> Void)) {
+        Task { @MainActor in
+            let title = "Rejected"
+            let description = "\(opponent) doesn't want to play with you"
+            let okAction = InterruptingAlert.Action(title: "OK", action: recover)
+            self.interruptionDelegate?.showAlert(title: title, description: description, actions: [okAction])
+        }
+    }
+
+    func alertUnexpectedDisconnection(me: String, opponent: String, result: Wins, recover: (@escaping () -> Void)) {
+        Task { @MainActor in
+            let title = "Unexpected Disconnection"
+            let description = "Result\n\(me): \(result.me)\n\(opponent): \(result.opponent)"
+            let okAction = InterruptingAlert.Action(title: "OK", action: recover)
+            self.interruptionDelegate?.showAlert(title: title, description: description, actions: [okAction])
+        }
+    }
+
     func handleTap(at point: CGPoint) {
         guard self.currentAvatar == self.myAvatar else {
             return
@@ -87,6 +110,16 @@ final class GameController: ObservableObject {
                 self.fill(place: placeNode)
                 self.broadcastDelegate?.send(command: .opponentPlaced(placeNode.place), reliable: true)
             }
+        }
+    }
+
+    func endMatch() {
+        Task { @MainActor in
+            let disconnectAction = InterruptingAlert.Action(title: "Yes", role: .destructive) {
+                self.broadcastDelegate?.disconnect()
+            }
+            let cancelAction = InterruptingAlert.Action(title: "No", role: .cancel, action: {})
+            self.interruptionDelegate?.showAlert(title: "End match", description: "Are you sure?", actions: [disconnectAction, cancelAction])
         }
     }
 
@@ -200,7 +233,7 @@ final class GameController: ObservableObject {
         }
     }
 
-    private func handleError(_ error: Error) {
+    private func handleError(_ error: Swift.Error) {
         Task { @MainActor in
             self.interruptionDelegate?.handleError(error)
         }
@@ -224,6 +257,23 @@ final class GameController: ObservableObject {
         }
     }
 
+    private func showResults(me: String, opponent: String, result: Wins, recover: (@escaping () -> Void)) {
+        Task { @MainActor in
+            let title: String
+            if result.me > result.opponent {
+                title = "You win!"
+            } else if result.me < result.opponent {
+                title = "You loose!"
+            } else {
+                title = "It's a draw!"
+            }
+
+            let description = "\(me): \(result.me)\n\(opponent): \(result.opponent)"
+            let okAction = InterruptingAlert.Action(title: "OK", action: recover)
+            self.interruptionDelegate?.showAlert(title: title, description: description, actions: [okAction])
+        }
+    }
+
     private func strikeThrough(_ type: StrikeThrough.StrikeType) {
         Task { @MainActor in
             self.sceneDelegate?.strikeThrough(type)
@@ -238,6 +288,29 @@ extension GameController: BroadcastControllerGameDelegate {
             self.defineGridPosition()
         } else {
             self.myAvatar.toggle()
+        }
+    }
+
+    func didDisconnect(isExpected: Bool, recover: (@escaping () -> Void)) {
+        let me = self.broadcastDelegate?.playerName ?? ""
+        let opponent = self.broadcastDelegate?.opponentName ?? ""
+        if isExpected {
+            self.showResults(me: me, opponent: opponent, result: self.result, recover: recover)
+        } else if self.isLobbySetUp {
+            self.alertUnexpectedDisconnection(me: me, opponent: opponent, result: self.result, recover: recover)
+        } else {
+            self.alertRejection(opponent: opponent, recover: recover)
+        }
+
+        self.isLobbySetUp = false
+        self.currentAvatar = Actor.Avatar.cross
+        self.myAvatar = Actor.Avatar.cross
+        self.result = Wins()
+        self.state[.cross]?.removeAll()
+        self.state[.circle]?.removeAll()
+
+        Task { @MainActor in
+            self.sceneDelegate?.deleteAllGrids()
         }
     }
 
@@ -259,12 +332,10 @@ extension GameController: BroadcastControllerGameDelegate {
             case let .gridPositionDefined(position):
                 self.defineGrid(at: position)
             default:
-                // TODO: implement RPCs
+                // RPCs handled by other entities
                 break
         }
     }
-
-
 }
 
 private extension Set where Element == Place.Position {

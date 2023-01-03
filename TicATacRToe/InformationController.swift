@@ -22,7 +22,7 @@ final class InformationController: ObservableObject, GameControllerInformationDe
 
     // MARK: - GameControllerInformationDelegate
     @MainActor @Published var currentAvatar = Actor.Avatar.cross
-    @MainActor @Published var isLobbySetUp: Bool = false
+    @MainActor @Published var isLobbySetUp = false
     @MainActor @Published var myAvatar = Actor.Avatar.cross
     @MainActor @Published var result = Wins()
 
@@ -38,10 +38,17 @@ final class InformationController: ObservableObject, GameControllerInformationDe
             do {
                 try self.broadcastDelegate?.setOpponent(self.opponent)
             } catch {
-                Task { @MainActor in
-                    self.interruptionDelegate?.handleError(error)
-                }
+                self.interruptionDelegate?.handleError(error)
             }
         }
+    }
+
+    @MainActor func reset() {
+        self.currentAvatar = Actor.Avatar.cross
+        self.isLobbySetUp = false
+        self.myAvatar = Actor.Avatar.cross
+        self.result = Wins()
+        self.availablePlayers = Set<String>()
+        self.opponent = ""
     }
 }

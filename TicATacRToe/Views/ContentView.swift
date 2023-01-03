@@ -11,6 +11,7 @@ import MultipeerConnectivity
 struct ContentView: View {
     @EnvironmentObject private var informationController: InformationController
     @EnvironmentObject private var interruptionController: InterruptionController
+    @EnvironmentObject private var gameController: GameController
 
     var body: some View {
         ZStack {
@@ -25,12 +26,23 @@ struct ContentView: View {
 
     private var hud: some View {
         VStack(spacing: 8) {
-            Text("Floating Tic Tac Toe")
-                .font(.appTitle)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .background(Color.black)
+            ZStack {
+                Text("Floating Tic Tac Toe")
+                    .font(.appTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.black)
+
+                HStack {
+                    Spacer()
+                    Button(action: self.gameController.endMatch, label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.white)
+                    })
+                    .padding()
+                }
+            }
 
             ZStack {
                 HStack {
@@ -58,7 +70,6 @@ struct ContentView: View {
 
                 Text(self.informationController.myAvatar.rawValue)
                     .font(.avatar)
-                    .fontWeight(.bold)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
             }

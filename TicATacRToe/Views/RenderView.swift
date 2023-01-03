@@ -65,6 +65,11 @@ struct RenderView: UIViewRepresentable {
         self.scene.rootNode.addChildNode(grid)
     }
 
+    func deleteAllGrids() {
+        self.grid?.removeFromParentNode()
+        self.grid = nil
+    }
+
     func makeNewGrid() {
         self.grid?.removeFromParentNode()
         let grid = Grid()
