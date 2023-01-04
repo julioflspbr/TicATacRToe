@@ -7,8 +7,8 @@
 
 import SceneKit
 
-final class Place: SCNNode {
-    enum Position: Hashable {
+@MainActor final class Place: SCNNode {
+    enum Position: Int, Hashable {
         case topLeft, top, topRight, left, centre, right, bottomLeft, bottom, bottomRight
     }
 

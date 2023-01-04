@@ -9,91 +9,103 @@ import MultipeerConnectivity
 
 protocol BroadcastControllerAlertDelegate: AnyObject {
     @MainActor func showAlert(title: String, description: String, actions: [InterruptingAlert.Action])
+    @MainActor func handleError(_ error: Error)
 }
 
-protocol BroadcastControllerGameSetupDelegate: AnyObject {
-    var isGameSetUp: Bool { get set }
+protocol BroadcastControllerInformationDelegate: AnyObject {
+    @MainActor var availablePlayers: Set<String> { get set }
+    @MainActor func reset()
+}
+
+protocol BroadcastControllerGameDelegate: AnyObject {
+    var isLobbySetUp: Bool { get set }
+    func receive(command: RPC)
+    func didConnect(isHost: Bool)
+    func didDisconnect(isExpected: Bool, recover: (@escaping () -> Void))
 }
 
 final class BroadcastController: NSObject, ObservableObject {
     private static let serviceType = "tic-a-tac-r-toe"
 
     weak var alertDelegate: BroadcastControllerAlertDelegate?
-    weak var gameSetupDelegate: BroadcastControllerGameSetupDelegate?
+    weak var gameDelegate: BroadcastControllerGameDelegate?
+    weak var informationDelegate: BroadcastControllerInformationDelegate?
 
-    @Published var nickname = "" {
+    private(set) var availablePlayers = [String : MCPeerID]() {
         didSet {
-            if self.nickname != oldValue {
-                self.broadcast()
+            Task { @MainActor in
+                self.informationDelegate?.availablePlayers = Set(self.availablePlayers.keys)
             }
-        }
-    }
-    @Published var opponent: MCPeerID? {
-        didSet {
-            if let session, let opponent {
-                self.browser?.invitePeer(opponent, to: session, withContext: nil, timeout: 30.0)
-            }
-        }
-    }
-
-    @Published private(set) var availablePlayers = [String : MCPeerID]()
-    @Published private(set) var connectionState = MCSessionState.notConnected {
-        didSet {
-            self.gameSetupDelegate?.isGameSetUp = (self.connectionState == .connected && self.opponent != nil && self.nickname.count >= 3)
         }
     }
 
     private var advertiser: MCNearbyServiceAdvertiser?
     private var browser: MCNearbyServiceBrowser?
     private var connectionDebouncer: Task<Void, Never>?
-    private var peerID: MCPeerID?
+    private var isDisconnectionExpected = false
+    private var isHost = true
     private var session: MCSession?
 
+    private var connectionState = MCSessionState.notConnected {
+        didSet {
+            if self.myPeerID != nil && self.opponent != nil && self.connectionState == .connected {
+                self.gameDelegate?.isLobbySetUp = true
+            } else {
+                self.gameDelegate?.isLobbySetUp = false
+            }
+        }
+    }
+    private var myPeerID: MCPeerID? {
+        didSet {
+            if self.myPeerID != oldValue {
+                self.broadcast()
+            }
+        }
+    }
+    var opponent: MCPeerID?
+
     private func broadcast() {
-        self.connectionDebouncer?.cancel()
-        self.connectionDebouncer = Task { [weak self] in
-            do {
-                try await Task.sleep(nanoseconds: 500 * NSEC_PER_MSEC)
-                try Task.checkCancellation()
-            } catch {
-                return
-            }
+        self.advertiser?.stopAdvertisingPeer()
+        self.browser?.stopBrowsingForPeers()
+        self.session?.disconnect()
 
-            guard let self else {
-                return
-            }
+        guard let myPeerID else {
+            self.advertiser = nil
+            self.browser = nil
+            self.session = nil
 
-            self.advertiser?.stopAdvertisingPeer()
-            self.browser?.stopBrowsingForPeers()
-            self.session?.disconnect()
+            return
+        }
 
-            guard self.nickname.count >= 3 else {
-                self.advertiser = nil
-                self.browser = nil
-                self.session = nil
-                self.peerID = nil
+        let session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .none)
+        session.delegate = self
 
-                return
-            }
+        let browser = MCNearbyServiceBrowser(peer: myPeerID, serviceType: Self.serviceType)
+        browser.delegate = self
+        browser.startBrowsingForPeers()
 
-            let peerID = MCPeerID(displayName: self.nickname)
+        let advertiser = MCNearbyServiceAdvertiser(peer: myPeerID, discoveryInfo: nil, serviceType: Self.serviceType)
+        advertiser.delegate = self
+        advertiser.startAdvertisingPeer()
 
-            let session = MCSession(peer: peerID, securityIdentity: nil, encryptionPreference: .none)
-            session.delegate = self
+        self.session = session
+        self.browser = browser
+        self.advertiser = advertiser
+        self.isHost = true
+    }
 
-            let browser = MCNearbyServiceBrowser(peer: peerID, serviceType: Self.serviceType)
-            browser.delegate = self
-            browser.startBrowsingForPeers()
+    private func finishDiscovery() {
+        self.availablePlayers.removeAll()
+        self.advertiser?.stopAdvertisingPeer()
+        self.browser?.stopBrowsingForPeers()
 
-            let advertiser = MCNearbyServiceAdvertiser(peer: peerID, discoveryInfo: nil, serviceType: Self.serviceType)
-            advertiser.delegate = self
-            advertiser.startAdvertisingPeer()
+        self.advertiser = nil
+        self.browser = nil
+    }
 
-            self.peerID = peerID
-            self.session = session
-            self.browser = browser
-            self.advertiser = advertiser
-            self.connectionDebouncer = nil
+    private func handleError(_ error: Swift.Error) {
+        Task { @MainActor in
+            self.alertDelegate?.handleError(error)
         }
     }
 
@@ -120,22 +132,96 @@ final class BroadcastController: NSObject, ObservableObject {
         }
     }
 
-    private func finishDiscovery() {
-        self.advertiser?.stopAdvertisingPeer()
-        self.browser?.stopBrowsingForPeers()
+    private func receive(command: RPC) {
+        if case .matchEnded = command {
+            self.isDisconnectionExpected = true
+            self.session?.disconnect()
+        }
+    }
 
-        self.advertiser = nil
-        self.browser = nil
-
+    private func reset() {
+        self.browser?.stopBrowsingForPeers(); self.browser = nil
+        self.advertiser?.stopAdvertisingPeer(); self.advertiser = nil
+        self.session?.disconnect(); self.session = nil
+        self.availablePlayers = [String : MCPeerID]()
+        self.connectionState = MCSessionState.notConnected
+        self.isDisconnectionExpected = false
+        self.isHost = true
+        self.opponent = nil
         Task { @MainActor in
-            self.availablePlayers.removeAll()
+            self.informationDelegate?.reset()
+        }
+    }
+}
+
+extension BroadcastController: GameControllerBroadcastDelegate {
+    var playerName: String {
+        self.myPeerID?.displayName ?? ""
+    }
+
+    var opponentName: String {
+        self.opponent?.displayName ?? ""
+    }
+
+    func disconnect() {
+        self.isDisconnectionExpected = true
+        self.send(command: .matchEnded, reliable: true)
+    }
+
+    func send(command: RPC, reliable: Bool) {
+        do {
+            guard let session, let opponent else {
+                return
+            }
+
+            let encoder = JSONEncoder()
+            let encoded = try encoder.encode(command)
+            try session.send(encoded, toPeers: [opponent], with: reliable ? .reliable : .unreliable)
+        } catch {
+            Task { @MainActor in
+                self.alertDelegate?.handleError(error)
+            }
+        }
+    }
+}
+
+extension BroadcastController: InformationControllerBroadcastDelegate {
+    func setNickname(_ name: String) {
+        guard name != self.myPeerID?.displayName else {
+            return
+        }
+
+        self.connectionDebouncer?.cancel()
+        self.connectionDebouncer = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: 500 * NSEC_PER_MSEC)
+                try Task.checkCancellation()
+            } catch {
+                return
+            }
+
+            if name.count > 3 {
+                self?.myPeerID = MCPeerID(displayName: name)
+            } else {
+                self?.myPeerID = nil
+            }
+
+            self?.broadcast()
+            self?.connectionDebouncer = nil
+        }
+    }
+
+    func setOpponent(_ name: String) throws {
+        self.opponent = self.availablePlayers[name]
+        if let opponent, let session {
+            self.browser?.invitePeer(opponent, to: session, withContext: nil, timeout: 30.0)
         }
     }
 }
 
 extension BroadcastController: MCNearbyServiceBrowserDelegate {
     func browser(_ browser: MCNearbyServiceBrowser, foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
-        guard peerID.displayName != self.peerID?.displayName else {
+        guard peerID.displayName != self.myPeerID?.displayName else {
             return
         }
         self.availablePlayers[peerID.displayName] = peerID
@@ -148,9 +234,8 @@ extension BroadcastController: MCNearbyServiceBrowserDelegate {
         }
     }
 
-    func browser(_ browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: Error) {
-        // TODO: handle error
-        print("LALA browser error: \(error)")
+    func browser(_ browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: Swift.Error) {
+        self.handleError(error)
     }
 }
 
@@ -165,38 +250,49 @@ extension BroadcastController: MCNearbyServiceAdvertiserDelegate {
             return
         }
 
-        Task { @MainActor in
+        Task {
             if await self.handleInvitation(from: peerID) {
                 invitationHandler(true, session)
+                self.isHost = false
             } else {
                 invitationHandler(false, session)
                 self.opponent = nil
+                self.isHost = true
             }
         }
     }
 
-    func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: Error) {
-        // TODO: handle error
-        print("LALA advertiser error: \(error)")
+    func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: Swift.Error) {
+        self.handleError(error)
     }
 }
 
 extension BroadcastController: MCSessionDelegate {
     func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
-        Task { @MainActor in
-            self.opponent = (state == .connected ? peerID : nil)
-            self.connectionState = state
-        }
-
         if state == .connected {
+            self.opponent = peerID
             self.finishDiscovery()
-        } else if state == .notConnected && (self.advertiser == nil || self.browser == nil) {
-            self.broadcast()
+            self.gameDelegate?.didConnect(isHost: self.isHost)
+        } else if state == .notConnected {
+            self.gameDelegate?.didDisconnect(isExpected: self.isDisconnectionExpected, recover: self.broadcast)
+            self.reset()
         }
+        self.connectionState = state
     }
 
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
-        // TODO: IPC comms
+        guard peerID == self.opponent else {
+            return
+        }
+
+        do {
+            let decoder = JSONDecoder()
+            let command = try decoder.decode(RPC.self, from: data)
+            self.receive(command: command)
+            self.gameDelegate?.receive(command: command)
+        } catch {
+            self.handleError(error)
+        }
     }
 
     func session(_ session: MCSession, didReceive stream: InputStream, withName streamName: String, fromPeer peerID: MCPeerID) {
@@ -207,7 +303,7 @@ extension BroadcastController: MCSessionDelegate {
         // we don't care
     }
 
-    func session(_ session: MCSession, didFinishReceivingResourceWithName resourceName: String, fromPeer peerID: MCPeerID, at localURL: URL?, withError error: Error?) {
+    func session(_ session: MCSession, didFinishReceivingResourceWithName resourceName: String, fromPeer peerID: MCPeerID, at localURL: URL?, withError error: Swift.Error?) {
         // we don't care
     }
 }

@@ -7,19 +7,19 @@
 
 import SwiftUI
 
-final class InterruptionController: ObservableObject, GameControllerInterruptionDelegate, BroadcastControllerAlertDelegate {
-    @Published fileprivate var isDisplayingAlert: Bool = false {
+final class InterruptionController: ObservableObject, GameControllerInterruptionDelegate, BroadcastControllerAlertDelegate, InformationControllerInterruptionDelegate {
+    @MainActor @Published fileprivate var isDisplayingAlert: Bool = false {
         didSet {
-            self.alert = (self.is3DInteractionDenied ? self.alert : nil)
+            self.alert = (self.isDisplayingAlert ? self.alert : nil)
         }
     }
 
-    @Published fileprivate private(set) var alert: InterruptingAlert.AlertContent?
+    @MainActor @Published fileprivate private(set) var alert: InterruptingAlert.AlertContent?
 
-    @Published private var is3DInteractionDenied = true
+    @MainActor @Published private var is3DInteractionDenied = true
 
-    var isInteractionBlocked: Bool {
-        self.isDisplayingAlert || is3DInteractionDenied
+    @MainActor var isInteractionBlocked: Bool {
+        self.isDisplayingAlert || self.is3DInteractionDenied
     }
 
     @MainActor func allow3DInteraction() {
@@ -31,10 +31,10 @@ final class InterruptionController: ObservableObject, GameControllerInterruption
     }
 
     @MainActor func handleError(_ error: Error) {
-        self.showAlert(title: "Bummer", description: error.localizedDescription)
+        self.showAlert(title: "Bummer", description: error.localizedDescription, actions: [])
     }
 
-    @MainActor func showAlert(title: String, description: String, actions: [InterruptingAlert.Action] = []) {
+    @MainActor func showAlert(title: String, description: String, actions: [InterruptingAlert.Action]) {
         self.alert = InterruptingAlert.AlertContent(title: title, description: description, actions: actions)
         self.isDisplayingAlert = true
     }

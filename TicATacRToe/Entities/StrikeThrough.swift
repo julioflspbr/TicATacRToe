@@ -7,7 +7,7 @@
 
 import SceneKit
 
-final class StrikeThrough: SCNNode {
+@MainActor final class StrikeThrough: SCNNode {
     enum VerticalPosition {
         case left
         case centre

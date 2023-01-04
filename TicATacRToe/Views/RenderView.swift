@@ -34,13 +34,19 @@ struct RenderView: UIViewRepresentable {
     }
 }
 
-final class SceneController: GameControllerSceneDelegate {
-    weak var sceneView: SCNView?
+@MainActor final class SceneController: GameControllerSceneDelegate {
+    enum Error: Swift.Error {
+        case gridNotDefined
+    }
+
     let scene: SCNScene
+
+    weak var sceneView: SCNView?
+
+    private var grid: Grid?
 
     init() {
         self.scene = SCNScene()
-        self.scene.rootNode.addChildNode(Grid())
 
         let camera = SCNCamera()
         camera.automaticallyAdjustsZRange = true
@@ -49,6 +55,52 @@ final class SceneController: GameControllerSceneDelegate {
         cameraNode.position.z = 2.5
         cameraNode.camera = camera
         self.scene.rootNode.addChildNode(cameraNode)
+    }
+
+    func defineGrid(at: SIMD3<Float>) throws {
+        // disregard *position* on simulator
+        guard let grid else {
+            throw Error.gridNotDefined
+        }
+        self.scene.rootNode.addChildNode(grid)
+    }
+
+    func deleteAllGrids() {
+        self.grid?.removeFromParentNode()
+        self.grid = nil
+    }
+
+    func makeNewGrid() {
+        self.grid?.removeFromParentNode()
+        let grid = Grid()
+        self.grid = grid
+    }
+
+    func queryPlace(for place: Place.Position) throws -> Place {
+        guard let grid else {
+            throw Error.gridNotDefined
+        }
+
+        switch place {
+            case .topLeft:
+                return grid.topLeftPlaceNode
+            case .top:
+                return grid.topPlaceNode
+            case .topRight:
+                return grid.topRightPlaceNode
+            case .left:
+                return grid.leftPlaceNode
+            case .centre:
+                return grid.centrePlaceNode
+            case .right:
+                return grid.rightPlaceNode
+            case .bottomLeft:
+                return grid.bottomLeftPlaceNode
+            case .bottom:
+                return grid.bottomPlaceNode
+            case .bottomRight:
+                return grid.bottomRightPlaceNode
+        }
     }
 
     func queryPlace(at point: CGPoint) -> Place? {
@@ -84,6 +136,6 @@ final class SceneController: GameControllerSceneDelegate {
                 strikeThrough.position = SCNVector3(0.0, 0.0, 0.0)
         }
 
-        self.scene.rootNode.addChildNode(strikeThrough)
+        self.grid?.addChildNode(strikeThrough)
     }
 }
