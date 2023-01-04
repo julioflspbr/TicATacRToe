@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		22261A3D29658BC900069618 /* SceneController+Simulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22261A3C29658BC900069618 /* SceneController+Simulator.swift */; };
 		22B360FB2952EF57004D49C9 /* GameController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22B360FA2952EF57004D49C9 /* GameController.swift */; };
 		22C6CCCD295440CE000D2D86 /* Place.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22C6CCCC295440CE000D2D86 /* Place.swift */; };
 		22C6CCD729558E31000D2D86 /* TapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22C6CCD629558E31000D2D86 /* TapView.swift */; };
@@ -30,6 +31,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		22261A3C29658BC900069618 /* SceneController+Simulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SceneController+Simulator.swift"; sourceTree = "<group>"; };
 		22B360FA2952EF57004D49C9 /* GameController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameController.swift; sourceTree = "<group>"; };
 		22C6CCCC295440CE000D2D86 /* Place.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Place.swift; sourceTree = "<group>"; };
 		22C6CCD629558E31000D2D86 /* TapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TapView.swift; sourceTree = "<group>"; };
@@ -66,6 +68,27 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		22261A3B2965709B00069618 /* Controllers */ = {
+			isa = PBXGroup;
+			children = (
+				70B6C786295C0FD500FAB5C6 /* BroadcastController.swift */,
+				22B360FA2952EF57004D49C9 /* GameController.swift */,
+				70E0E63529634D83009BFAB9 /* InformationController.swift */,
+				70B7A5B8295B6C69006A7D20 /* InterruptionController.swift */,
+				22261A3C29658BC900069618 /* SceneController+Simulator.swift */,
+			);
+			path = Controllers;
+			sourceTree = "<group>";
+		};
+		225483E4296729BB007B0508 /* Data Models */ = {
+			isa = PBXGroup;
+			children = (
+				70E0E63729635060009BFAB9 /* Wins.swift */,
+				70B6C78C29618A1300FAB5C6 /* RPC.swift */,
+			);
+			path = "Data Models";
+			sourceTree = "<group>";
+		};
 		22CAA4312949B6A400FD9695 = {
 			isa = PBXGroup;
 			children = (
@@ -86,14 +109,11 @@
 			isa = PBXGroup;
 			children = (
 				70B6C788295DA20600FAB5C6 /* Info.plist */,
-				70B6C786295C0FD500FAB5C6 /* BroadcastController.swift */,
-				22B360FA2952EF57004D49C9 /* GameController.swift */,
-				70E0E63529634D83009BFAB9 /* InformationController.swift */,
-				70B7A5B8295B6C69006A7D20 /* InterruptionController.swift */,
-				70B6C78C29618A1300FAB5C6 /* RPC.swift */,
 				22CAA43D2949B6A400FD9695 /* TicATacRToeApp.swift */,
 				70D6956229596D7500770807 /* Assets */,
-				22CAA4692949B9B600FD9695 /* Entities */,
+				22261A3B2965709B00069618 /* Controllers */,
+				225483E4296729BB007B0508 /* Data Models */,
+				22CAA4692949B9B600FD9695 /* Entities+Simulator */,
 				22CAA4432949B6A700FD9695 /* Preview */,
 				70D695602959689400770807 /* Views */,
 			);
@@ -109,16 +129,15 @@
 			path = Preview;
 			sourceTree = "<group>";
 		};
-		22CAA4692949B9B600FD9695 /* Entities */ = {
+		22CAA4692949B9B600FD9695 /* Entities+Simulator */ = {
 			isa = PBXGroup;
 			children = (
 				70D6955C29584B4200770807 /* Actor.swift */,
 				70D6955A29584A4F00770807 /* Grid.swift */,
 				22C6CCCC295440CE000D2D86 /* Place.swift */,
 				70D6955E29584C8E00770807 /* StrikeThrough.swift */,
-				70E0E63729635060009BFAB9 /* Wins.swift */,
 			);
-			path = Entities;
+			path = "Entities+Simulator";
 			sourceTree = "<group>";
 		};
 		70D695602959689400770807 /* Views */ = {
@@ -222,6 +241,7 @@
 				70E0E63629634D83009BFAB9 /* InformationController.swift in Sources */,
 				22CAA4402949B6A400FD9695 /* ContentView.swift in Sources */,
 				22C6CCCD295440CE000D2D86 /* Place.swift in Sources */,
+				22261A3D29658BC900069618 /* SceneController+Simulator.swift in Sources */,
 				22B360FB2952EF57004D49C9 /* GameController.swift in Sources */,
 				70D6955B29584A4F00770807 /* Grid.swift in Sources */,
 				22CAA43E2949B6A400FD9695 /* TicATacRToeApp.swift in Sources */,

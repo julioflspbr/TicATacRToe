@@ -5,6 +5,7 @@
 //  Created by Júlio César Flores on 25/12/2022.
 //
 
+#if targetEnvironment(simulator)
 import SceneKit
 
 @MainActor final class StrikeThrough: SCNNode {
@@ -60,3 +61,4 @@ import SceneKit
         fatalError("init(coder:) has not been implemented")
     }
 }
+#endif

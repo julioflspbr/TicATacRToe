@@ -30,9 +30,10 @@ protocol GameControllerInterruptionDelegate: AnyObject {
 }
 
 protocol GameControllerSceneDelegate: AnyObject {
-    @MainActor func defineGrid(at: SIMD3<Float>) throws
     @MainActor func deleteAllGrids()
+    @MainActor func defineGridPosition() throws
     @MainActor func makeNewGrid()
+    @MainActor func moveGrid(by: SIMD3<Float>) throws
     @MainActor func queryPlace(for: Place.Position) throws -> Place
     @MainActor func queryPlace(at: CGPoint) -> Place?
     @MainActor func strikeThrough(_: StrikeThrough.StrikeType) -> Void
@@ -173,39 +174,19 @@ final class GameController: ObservableObject {
             self.state[.circle]?.removeAll()
             self.currentAvatar = .cross
             self.myAvatar.toggle()
-            self.makeNewGrid()
-            if self.myAvatar == .cross {
-                self.defineGridPosition()
+
+            Task { @MainActor in
+                do {
+                    self.sceneDelegate?.makeNewGrid()
+                    if self.myAvatar == .cross {
+                        try self.sceneDelegate?.defineGridPosition()
+                    }
+                } catch {
+                    self.handleError(error)
+                }
             }
         } else {
             self.currentAvatar.toggle()
-        }
-    }
-
-    private func defineGridPosition() {
-        // simulate simulator defining grid position
-
-        Task { @MainActor in
-            let attemptCount = 5
-            let finalAttempt = 4
-            var positionDefined = SIMD3<Float>()
-
-            for i in 0 ..< attemptCount {
-                if i < finalAttempt {
-                    try await Task.sleep(nanoseconds: 200 * NSEC_PER_MSEC)
-                    let fakeX = Float.random(in: -100.0 ... 100.0)
-                    let fakeY = Float.random(in: -100.0 ... 100.0)
-                    let fakeZ = Float.random(in: -100.0 ... 100.0)
-                    positionDefined = SIMD3<Float>(x: fakeX, y: fakeY, z: fakeZ)
-
-                    self.broadcastDelegate?.send(command: .gridMoved(positionDefined), reliable: false)
-                    print("Moving grid at: \(positionDefined)")
-                } else {
-                    try? self.sceneDelegate?.defineGrid(at: positionDefined)
-                    self.broadcastDelegate?.send(command: .gridPositionDefined(positionDefined), reliable: true)
-                    print("Defining grid at: \(positionDefined)")
-                }
-            }
         }
     }
 
@@ -223,25 +204,31 @@ final class GameController: ObservableObject {
         self.checkGameEnd()
     }
 
-    private func defineGrid(at position: SIMD3<Float>) {
-        Task { @MainActor in
-            do {
-                try self.sceneDelegate?.defineGrid(at: position)
-            } catch {
-                self.handleError(error)
-            }
-        }
-    }
-
     private func handleError(_ error: Swift.Error) {
         Task { @MainActor in
             self.interruptionDelegate?.handleError(error)
         }
     }
 
-    private func makeNewGrid() {
+    private func moveGrid(by position: SIMD3<Float>) {
         Task { @MainActor in
-            self.sceneDelegate?.makeNewGrid()
+            do {
+                try self.sceneDelegate?.moveGrid(by: position)
+            } catch {
+                self.handleError(error)
+            }
+        }
+    }
+
+    private func place(at position: Place.Position) {
+        Task {
+            do {
+                if let placeNode = try await self.queryPlace(for: position) {
+                    self.fill(place: placeNode)
+                }
+            } catch {
+                self.handleError(error)
+            }
         }
     }
 
@@ -283,11 +270,18 @@ final class GameController: ObservableObject {
 
 extension GameController: BroadcastControllerGameDelegate {
     func didConnect(isHost: Bool) {
-        self.makeNewGrid()
-        if isHost {
-            self.defineGridPosition()
-        } else {
-            self.myAvatar.toggle()
+        Task { @MainActor in
+            do {
+                self.sceneDelegate?.makeNewGrid()
+
+                if isHost {
+                    try self.sceneDelegate?.defineGridPosition()
+                } else {
+                    self.myAvatar.toggle()
+                }
+            } catch {
+                self.handleError(error)
+            }
         }
     }
 
@@ -317,24 +311,25 @@ extension GameController: BroadcastControllerGameDelegate {
     func receive(command: RPC) {
         switch command {
             case let .opponentPlaced(position):
-                Task {
-                    do {
-                        if let placeNode = try await self.queryPlace(for: position) {
-                            self.fill(place: placeNode)
-                        }
-                    } catch {
-                        self.handleError(error)
-                    }
-                }
+                self.place(at: position)
             case .gridMoved:
-                // disregard on simulator
-                break
+                break // disregard on simulator
             case let .gridPositionDefined(position):
-                self.defineGrid(at: position)
+                self.moveGrid(by: position)
             default:
                 // RPCs handled by other entities
                 break
         }
+    }
+}
+
+extension GameController: SceneControllerGameDelegate {
+    func didMoveGrid(by position: SIMD3<Float>) {
+        self.broadcastDelegate?.send(command: .gridMoved(position), reliable: false)
+    }
+
+    func didDefineGridPosition(at position: SIMD3<Float>) {
+        self.broadcastDelegate?.send(command: .gridPositionDefined(position), reliable: true)
     }
 }
 

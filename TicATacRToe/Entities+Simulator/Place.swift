@@ -5,6 +5,7 @@
 //  Created by Júlio César Flores on 22/12/22.
 //
 
+#if targetEnvironment(simulator)
 import SceneKit
 
 @MainActor final class Place: SCNNode {
@@ -78,3 +79,4 @@ import SceneKit
         fatalError("Please don't decode. Bad idea.")
     }
 }
+#endif
