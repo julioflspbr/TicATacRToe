@@ -5,11 +5,6 @@
 //  Created by Júlio César Flores on 04/01/23.
 //
 
-protocol SceneControllerGameDelegate: AnyObject {
-    func didMoveGrid(by: SIMD3<Float>)
-    func didDefineGridPosition(at: SIMD3<Float>)
-}
-
 #if targetEnvironment(simulator)
 import SceneKit
 

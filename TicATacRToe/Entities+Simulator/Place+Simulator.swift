@@ -1,5 +1,5 @@
 //
-//  Place.swift
+//  Place+Simulator.swift
 //  TicATacRToe
 //
 //  Created by Júlio César Flores on 22/12/22.
@@ -17,7 +17,7 @@ import SceneKit
         case placeAlreadyTaken(Position)
     }
 
-    let place: Position
+    let position: Position
 
     private let crossTemplate: SCNNode
     private let circleTemplate: SCNNode

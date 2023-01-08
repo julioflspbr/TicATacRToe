@@ -109,7 +109,7 @@ final class GameController: ObservableObject {
         Task {
             if let placeNode = await self.queryPlace(at: point) {
                 self.fill(place: placeNode)
-                self.broadcastDelegate?.send(command: .opponentPlaced(placeNode.place), reliable: true)
+//                self.broadcastDelegate?.send(command: .opponentPlaced(placeNode.place), reliable: true)
             }
         }
     }
@@ -194,13 +194,13 @@ final class GameController: ObservableObject {
         let currentAvatar = self.currentAvatar
         Task { @MainActor in
             do {
-                try place.fill(with: currentAvatar)
+//                try place.fill(with: currentAvatar)
             } catch {
                 self.handleError(error)
             }
         }
 
-        self.state[currentAvatar]?.insert(place.place)
+//        self.state[currentAvatar]?.insert(place.place)
         self.checkGameEnd()
     }
 

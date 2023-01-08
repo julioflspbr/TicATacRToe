@@ -31,7 +31,7 @@ enum RPC: Codable {
                 let position = try decoder.decode(SIMD3<Float>.self)
                 self = .gridPositionDefined(position)
             case 2:
-                let rawPosition = try decoder.decode(Int.self)
+                let rawPosition = try decoder.decode(String.self)
                 guard let position = Place.Position(rawValue: rawPosition) else {
                     throw Error.badPositionChoice
                 }

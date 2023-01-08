@@ -7,5 +7,7 @@
 		<string>_tic-a-tac-r-toe._tcp</string>
 		<string>_tic-a-tac-r-toe._udp</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Improve your experience with Augmented Reality</string>
 </dict>
 </plist>

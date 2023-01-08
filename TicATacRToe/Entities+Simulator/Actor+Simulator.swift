@@ -1,5 +1,5 @@
 //
-//  Actor.swift
+//  Actor+Simulator.swift
 //  TicATacRToe
 //
 //  Created by Júlio César Flores on 25/12/2022.
