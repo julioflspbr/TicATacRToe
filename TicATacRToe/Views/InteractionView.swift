@@ -10,13 +10,11 @@ import SwiftUI
 struct InteractiveView: View {
     @State private var deltaDistance: CGFloat = 0.0
     @State private var deltaScale: CGFloat = 0.0
-    @State private var isActive = true
     @State private var isGridDefined = false
     @State private var tapPoint: CGPoint?
 
     var body: some View {
-        RenderView(deltaDistance: self.deltaDistance, deltaScale: self.deltaScale,
-                   isActive: self.isActive, isGridDefined: $isGridDefined, tapPoint: $tapPoint)
+        RenderView(deltaDistance: self.deltaDistance, deltaScale: self.deltaScale, isGridDefined: $isGridDefined, tapPoint: $tapPoint)
             .ignoresSafeArea()
             .gesture(DragGesture(minimumDistance: 5.0)
                 .onChanged { drag in

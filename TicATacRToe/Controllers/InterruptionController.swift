@@ -7,7 +7,8 @@
 
 import SwiftUI
 
-final class InterruptionController: ObservableObject, GameControllerInterruptionDelegate, BroadcastControllerAlertDelegate, InformationControllerInterruptionDelegate {
+final class InterruptionController: ObservableObject, GameControllerInterruptionDelegate,
+                                    BroadcastControllerAlertDelegate, InformationControllerInterruptionDelegate, SceneControllerInterruptionDelegate {
     @MainActor @Published fileprivate var isDisplayingAlert: Bool = false {
         didSet {
             self.alert = (self.isDisplayingAlert ? self.alert : nil)

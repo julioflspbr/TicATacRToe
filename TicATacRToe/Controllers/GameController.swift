@@ -31,12 +31,9 @@ protocol GameControllerInterruptionDelegate: AnyObject {
 
 protocol GameControllerSceneDelegate: AnyObject {
     @MainActor func deleteAllGrids()
-    @MainActor func defineGridPosition() throws
     @MainActor func makeNewGrid()
-    @MainActor func moveGrid(by: SIMD3<Float>) throws
-    @MainActor func queryPlace(for: Place.Position) throws -> Place
-    @MainActor func queryPlace(at: CGPoint) -> Place?
-    @MainActor func strikeThrough(_: StrikeThrough.StrikeType) -> Void
+    @MainActor func paintGrid(with: Actor.Colour) throws
+    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws
 }
 
 final class GameController: ObservableObject {
@@ -81,6 +78,7 @@ final class GameController: ObservableObject {
         }
     }
 
+    private var colour = Actor.Colour.red
     private var state = [Actor.Avatar.cross: Set<Place.Position>(), Actor.Avatar.circle: Set<Place.Position>()]
 
     func alertRejection(opponent: String, recover: (@escaping () -> Void)) {
@@ -101,19 +99,6 @@ final class GameController: ObservableObject {
         }
     }
 
-    func handleTap(at point: CGPoint) {
-        guard self.currentAvatar == self.myAvatar else {
-            return
-        }
-
-        Task {
-            if let placeNode = await self.queryPlace(at: point) {
-                self.fill(place: placeNode)
-//                self.broadcastDelegate?.send(command: .opponentPlaced(placeNode.place), reliable: true)
-            }
-        }
-    }
-
     func endMatch() {
         Task { @MainActor in
             let disconnectAction = InterruptingAlert.Action(title: "Yes", role: .destructive) {
@@ -121,126 +106,6 @@ final class GameController: ObservableObject {
             }
             let cancelAction = InterruptingAlert.Action(title: "No", role: .cancel, action: {})
             self.interruptionDelegate?.showAlert(title: "End match", description: "Are you sure?", actions: [disconnectAction, cancelAction])
-        }
-    }
-
-    private func checkGameEnd() {
-        guard let state = self.state[self.currentAvatar] else {
-            return
-        }
-
-        let hasVictory: Bool
-        if state.contains(elements: [.topLeft, .top, .topRight]) {
-            self.strikeThrough(.horizontal(.top))
-            hasVictory = true
-        } else if state.contains(elements: [.left, .centre, .right]) {
-            self.strikeThrough(.horizontal(.centre))
-            hasVictory = true
-        } else if state.contains(elements: [.bottomLeft, .bottom, .bottomRight]) {
-            self.strikeThrough(.horizontal(.bottom))
-            hasVictory = true
-        } else if state.contains(elements: [.topLeft, .left, .bottomLeft]) {
-            self.strikeThrough(.vertical(.left))
-            hasVictory = true
-        } else if state.contains(elements: [.top, .centre, .bottom]) {
-            self.strikeThrough(.vertical(.centre))
-            hasVictory = true
-        } else if state.contains(elements: [.topRight, .right, .bottomRight]) {
-            self.strikeThrough(.vertical(.right))
-            hasVictory = true
-        } else if state.contains(elements: [.topLeft, .centre, .bottomRight]) {
-            self.strikeThrough(.diagonal(.leftTop))
-            hasVictory = true
-        } else if state.contains(elements: [.topRight, .centre, .bottomLeft]) {
-            self.strikeThrough(.diagonal(.rightTop))
-            hasVictory = true
-        } else {
-            hasVictory = false
-        }
-
-        if hasVictory {
-            if self.currentAvatar == self.myAvatar {
-                self.result.me += 1
-            } else {
-                self.result.opponent += 1
-            }
-        }
-
-        let allPlacesFilled = 9
-        let filledWithCircles = self.state[.circle]?.count ?? 0
-        let filledWithCrosses = self.state[.cross]?.count ?? 0
-        if hasVictory || filledWithCircles + filledWithCrosses == allPlacesFilled {
-            self.state[.cross]?.removeAll()
-            self.state[.circle]?.removeAll()
-            self.currentAvatar = .cross
-            self.myAvatar.toggle()
-
-            Task { @MainActor in
-                do {
-                    self.sceneDelegate?.makeNewGrid()
-                    if self.myAvatar == .cross {
-                        try self.sceneDelegate?.defineGridPosition()
-                    }
-                } catch {
-                    self.handleError(error)
-                }
-            }
-        } else {
-            self.currentAvatar.toggle()
-        }
-    }
-
-    private func fill(place: Place) {
-        let currentAvatar = self.currentAvatar
-        Task { @MainActor in
-            do {
-//                try place.fill(with: currentAvatar)
-            } catch {
-                self.handleError(error)
-            }
-        }
-
-//        self.state[currentAvatar]?.insert(place.place)
-        self.checkGameEnd()
-    }
-
-    private func handleError(_ error: Swift.Error) {
-        Task { @MainActor in
-            self.interruptionDelegate?.handleError(error)
-        }
-    }
-
-    private func moveGrid(by position: SIMD3<Float>) {
-        Task { @MainActor in
-            do {
-                try self.sceneDelegate?.moveGrid(by: position)
-            } catch {
-                self.handleError(error)
-            }
-        }
-    }
-
-    private func place(at position: Place.Position) {
-        Task {
-            do {
-                if let placeNode = try await self.queryPlace(for: position) {
-                    self.fill(place: placeNode)
-                }
-            } catch {
-                self.handleError(error)
-            }
-        }
-    }
-
-    private func queryPlace(at point: CGPoint) async -> Place? {
-        await MainActor.run {
-            self.sceneDelegate?.queryPlace(at: point)
-        }
-    }
-
-    private func queryPlace(for position: Place.Position) async throws -> Place? {
-        try await MainActor.run {
-            try self.sceneDelegate?.queryPlace(for: position)
         }
     }
 
@@ -261,9 +126,13 @@ final class GameController: ObservableObject {
         }
     }
 
-    private func strikeThrough(_ type: StrikeThrough.StrikeType) {
+    private func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) {
         Task { @MainActor in
-            self.sceneDelegate?.strikeThrough(type)
+            do {
+                try self.sceneDelegate?.strikeThrough(type, colour: colour)
+            } catch {
+                self.interruptionDelegate?.handleError(error)
+            }
         }
     }
 }
@@ -271,16 +140,12 @@ final class GameController: ObservableObject {
 extension GameController: BroadcastControllerGameDelegate {
     func didConnect(isHost: Bool) {
         Task { @MainActor in
-            do {
+            if isHost {
+                self.colour = .red
                 self.sceneDelegate?.makeNewGrid()
-
-                if isHost {
-                    try self.sceneDelegate?.defineGridPosition()
-                } else {
-                    self.myAvatar.toggle()
-                }
-            } catch {
-                self.handleError(error)
+            } else {
+                self.colour = .blue
+                self.myAvatar.toggle()
             }
         }
     }
@@ -307,29 +172,82 @@ extension GameController: BroadcastControllerGameDelegate {
             self.sceneDelegate?.deleteAllGrids()
         }
     }
-
-    func receive(command: RPC) {
-        switch command {
-            case let .opponentPlaced(position):
-                self.place(at: position)
-            case .gridMoved:
-                break // disregard on simulator
-            case let .gridPositionDefined(position):
-                self.moveGrid(by: position)
-            default:
-                // RPCs handled by other entities
-                break
-        }
-    }
 }
 
 extension GameController: SceneControllerGameDelegate {
-    func didMoveGrid(by position: SIMD3<Float>) {
-        self.broadcastDelegate?.send(command: .gridMoved(position), reliable: false)
+    func didChangeOwner(isOwner: Bool) {
+        var avatar = self.myAvatar
+        if !isOwner {
+            avatar.toggle()
+        }
+        self.currentAvatar = avatar
     }
 
-    func didDefineGridPosition(at position: SIMD3<Float>) {
-        self.broadcastDelegate?.send(command: .gridPositionDefined(position), reliable: true)
+    func didPlaceActor() {
+        guard let state = self.state[self.currentAvatar] else {
+            return
+        }
+
+        let hasWinner: Bool
+        if state.contains(elements: [.topLeft, .top, .topRight]) {
+            self.strikeThrough(.horizontal(.top), colour: self.colour)
+            hasWinner = true
+        } else if state.contains(elements: [.left, .centre, .right]) {
+            self.strikeThrough(.horizontal(.centre), colour: self.colour)
+            hasWinner = true
+        } else if state.contains(elements: [.bottomLeft, .bottom, .bottomRight]) {
+            self.strikeThrough(.horizontal(.bottom), colour: self.colour)
+            hasWinner = true
+        } else if state.contains(elements: [.topLeft, .left, .bottomLeft]) {
+            self.strikeThrough(.vertical(.left), colour: self.colour)
+            hasWinner = true
+        } else if state.contains(elements: [.top, .centre, .bottom]) {
+            self.strikeThrough(.vertical(.centre), colour: self.colour)
+            hasWinner = true
+        } else if state.contains(elements: [.topRight, .right, .bottomRight]) {
+            self.strikeThrough(.vertical(.right), colour: self.colour)
+            hasWinner = true
+        } else if state.contains(elements: [.topLeft, .centre, .bottomRight]) {
+            self.strikeThrough(.diagonal(.leftTop), colour: self.colour)
+            hasWinner = true
+        } else if state.contains(elements: [.topRight, .centre, .bottomLeft]) {
+            self.strikeThrough(.diagonal(.rightTop), colour: self.colour)
+            hasWinner = true
+        } else {
+            hasWinner = false
+        }
+
+        if hasWinner {
+            if self.currentAvatar == self.myAvatar {
+                self.result.me += 1
+                Task { @MainActor in
+                    do {
+                        try self.sceneDelegate?.paintGrid(with: self.colour)
+                    } catch {
+                        self.interruptionDelegate?.handleError(error)
+                    }
+                }
+            } else {
+                self.result.opponent += 1
+            }
+        }
+
+        let allPlacesFilled = 9
+        let filledWithCircles = self.state[.circle]?.count ?? 0
+        let filledWithCrosses = self.state[.cross]?.count ?? 0
+        let isDraw = (filledWithCircles + filledWithCrosses == allPlacesFilled)
+        if hasWinner || isDraw {
+            self.state[.cross]?.removeAll()
+            self.state[.circle]?.removeAll()
+            self.currentAvatar = .cross
+            self.myAvatar.toggle()
+
+            Task { @MainActor in
+                if self.myAvatar == .cross {
+                    self.sceneDelegate?.makeNewGrid()
+                }
+            }
+        }
     }
 }
 

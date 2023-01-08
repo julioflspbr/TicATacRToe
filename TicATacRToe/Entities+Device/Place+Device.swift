@@ -13,10 +13,6 @@ final class Place: Entity {
         case topLeft, top, topRight, left, centre, right, bottomLeft, bottom, bottomRight
     }
 
-    enum Error: Swift.Error {
-        case placeAlreadyTaken(Position)
-    }
-
     private let position: Position
 
     private var isFilled = false
@@ -31,9 +27,9 @@ final class Place: Entity {
         self.components.set(tapComponent)
     }
 
-    func fill(with avatar: Actor.Avatar, colour: Actor.Colour) throws {
+    func fill(with avatar: Actor.Avatar, colour: Actor.Colour) {
         guard !self.isFilled else {
-            throw Error.placeAlreadyTaken(self.position)
+            return
         }
         let actor = Actor(avatar: avatar, colour: colour)
         self.addChild(actor)

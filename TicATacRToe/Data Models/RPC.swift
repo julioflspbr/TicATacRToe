@@ -14,10 +14,8 @@ enum RPC: Codable {
         case badCommand
     }
 
-    case gridMoved(SIMD3<Float>)
-    case gridPositionDefined(SIMD3<Float>)
-    case opponentPlaced(Place.Position)
     case matchEnded
+    case sessionData(Data)
 
     init(from decoder: Decoder) throws {
         var decoder = try decoder.unkeyedContainer()
@@ -25,20 +23,9 @@ enum RPC: Codable {
 
         switch command {
             case 0:
-                let position = try decoder.decode(SIMD3<Float>.self)
-                self = .gridMoved(position)
-            case 1:
-                let position = try decoder.decode(SIMD3<Float>.self)
-                self = .gridPositionDefined(position)
-            case 2:
-                let rawPosition = try decoder.decode(String.self)
-                guard let position = Place.Position(rawValue: rawPosition) else {
-                    throw Error.badPositionChoice
-                }
-                self = .opponentPlaced(position)
-
-            case 3:
                 self = .matchEnded
+            case 1:
+                self = .sessionData(try decoder.decode(Data.self))
             default:
                 throw Error.badCommand
         }
@@ -46,31 +33,22 @@ enum RPC: Codable {
 
     var rawValue: Int {
         switch self {
-            case .gridMoved:
-                return 0
-            case .gridPositionDefined:
-                return 1
-            case .opponentPlaced:
-                return 2
             case .matchEnded:
-                return 3
+                return 0
+            case .sessionData:
+                return 1
         }
     }
 
     func encode(to encoder: Encoder) throws {
         var encoder = encoder.unkeyedContainer()
-
         try encoder.encode(self.rawValue)
 
         switch self {
-            case let .gridMoved(position):
-                try encoder.encode(position)
-            case let .gridPositionDefined(position):
-                try encoder.encode(position)
-            case let .opponentPlaced(position):
-                try encoder.encode(position.rawValue)
             case .matchEnded:
                 break
+            case let .sessionData(data):
+                try encoder.encode(data)
         }
     }
 }

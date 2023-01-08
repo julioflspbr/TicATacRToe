@@ -99,12 +99,7 @@ struct ContentView: View {
     }
 
     private var threeDeeArea: some View {
-        Group {
-//            RenderView()
-//                .ignoresSafeArea()
-
-            TapView()
-        }
+        InteractiveView()
     }
 }
 
