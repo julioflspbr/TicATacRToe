@@ -10,7 +10,6 @@ import SwiftUI
 #if targetEnvironment(simulator)
 import SceneKit
 #else
-import ARKit
 import RealityKit
 #endif
 
@@ -28,7 +27,7 @@ struct RenderView: UIViewRepresentable {
     @EnvironmentObject private var interruptionController: InterruptionController
 
 #if targetEnvironment(simulator)
-    func makeUIView(context: Context) -> SCNView {
+    func makeUIView(context: Context) -> UIView {
         let sceneView = SCNView(frame: .zero, options: nil)
         context.coordinator.sceneView = sceneView
 
@@ -39,18 +38,15 @@ struct RenderView: UIViewRepresentable {
 
         return sceneView
     }
-
-    func updateUIView(_ uiView: SCNView, context: Context) {
-        // nothing at the moment
-    }
 #else
-    func makeUIView(context: Context) -> ARView {
+    func makeUIView(context: Context) -> UIView {
         let arView = ARView(frame: .zero)
         context.coordinator.arView = arView
         return arView
     }
+#endif
 
-    func updateUIView(_ arView: ARView, context: Context) {
+    func updateUIView(_: UIView, context: Context) {
         do {
             if let tapPoint {
                 Task {
@@ -72,13 +68,12 @@ struct RenderView: UIViewRepresentable {
         }
     }
 
-    static func dismantleUIView(_ uiView: ARView, coordinator: SceneController) {
+    static func dismantleUIView(_: UIView, coordinator: SceneCoordinator) {
         coordinator.renderDelegate = nil
     }
-#endif
 
-    func makeCoordinator() -> SceneController {
-        let sceneController = SceneController()
+    func makeCoordinator() -> SceneCoordinator {
+        let sceneController = SceneCoordinator()
         sceneController.renderDelegate = self
         sceneController.broadcastDelegate = self.broadcastController
         sceneController.gameDelegate = self.gameController
@@ -95,5 +90,82 @@ extension RenderView: SceneControllerRenderDelegate {
     @MainActor func didChangeGridStatus(isDefined: Bool) {
         self.isGridDefined = isDefined
         self.isGridDefinitionMethodTriggered = isDefined
+    }
+}
+
+final class SceneCoordinator {
+    var renderDelegate: SceneControllerRenderDelegate?
+
+#if targetEnvironment(simulator)
+    var sceneView: SCNView?
+#else
+    var arView: ARView?
+#endif
+
+    weak var broadcastDelegate: SceneControllerBroadcastDelegate?
+    weak var gameDelegate: SceneControllerGameDelegate?
+    weak var interruptionDelegate: SceneControllerInterruptionDelegate?
+
+    private var sceneController: SceneController?
+
+    func adjustGrid(distance: Float, scale: Float) {
+        self.sceneController?.adjustGrid(distance: distance, scale: scale)
+    }
+
+    func defineGridPosition() throws {
+        try self.sceneController?.defineGridPosition()
+    }
+
+    func handleTap(at point: CGPoint) throws {
+        try self.sceneController?.handleTap(at: point)
+    }
+
+    func receive(command: RPC) {
+        self.sceneController?.receive(command: command)
+
+        if case let .opponentDevice(type) = command {
+            self.defineOpponentDevice(type: type)
+        }
+    }
+
+    private func defineOpponentDevice(type: RPC.DeviceType) {
+#if targetEnvironment(simulator)
+        self.sceneController = SimulatorSceneController()
+#else
+        switch type {
+            case .simulator:
+                self.sceneController = HybridSceneController()
+            case .device:
+                self.sceneController = DeviceSceneController()
+        }
+#endif
+    }
+}
+
+extension SceneCoordinator: GameControllerSceneDelegate {
+    func deleteAllGrids() {
+        self.sceneController?.deleteAllGrids()
+    }
+
+    func makeNewGrid() {
+        self.sceneController?.makeNewGrid()
+    }
+
+    func paintGrid(with colour: Actor.Colour) throws {
+        try self.sceneController?.paintGrid(with: colour)
+    }
+
+    func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws {
+        try self.sceneController?.strikeThrough(type, colour: colour)
+    }
+}
+
+extension SceneCoordinator: BroadcastControllerSceneDelegate {
+    func didBreakConnection() {
+        self.sceneController?.didBreakConnection()
+    }
+
+    func didEstablishConnection() {
+        self.sceneController?.didEstablishConnection()
     }
 }

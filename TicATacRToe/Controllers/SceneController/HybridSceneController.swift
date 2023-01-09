@@ -12,7 +12,7 @@ import Foundation
 import RealityKit
 import MultipeerConnectivity
 
-final class SceneController: NSObject {
+final class HybridSceneController: NSObject, SceneController {
     private enum Constraints {
         enum Distance {
             static var `default`: Float { 2.0 }
@@ -134,7 +134,7 @@ final class SceneController: NSObject {
     }
 }
 
-extension SceneController: ARSessionDelegate {
+extension HybridSceneController: ARSessionDelegate {
     func session(_ session: ARSession, didOutputCollaborationData collabotationData: ARSession.CollaborationData) {
         do {
             let data = try NSKeyedArchiver.archivedData(withRootObject: collabotationData, requiringSecureCoding: true)
@@ -157,7 +157,7 @@ extension SceneController: ARSessionDelegate {
     }
 }
 
-extension SceneController: GameControllerSceneDelegate {
+extension HybridSceneController: GameControllerSceneDelegate {
     @MainActor func deleteAllGrids() {
         self.arView.scene.anchors.forEach { element in
             element.removeFromParent()
@@ -222,7 +222,7 @@ extension SceneController: GameControllerSceneDelegate {
     }
 }
 
-extension SceneController: BroadcastControllerSceneDelegate {
+extension HybridSceneController: BroadcastControllerSceneDelegate {
     func didBreakConnection() {
         self.arView.session.pause()
         self.arView.session.delegate = nil
@@ -258,12 +258,6 @@ extension SceneController: BroadcastControllerSceneDelegate {
         } catch {
             self.handleError(error)
         }
-    }
-}
-
-extension FloatingPoint {
-    func fenced(min: Self, max: Self) -> Self {
-        Self.minimum(Self.maximum(self, min), max)
     }
 }
 #endif

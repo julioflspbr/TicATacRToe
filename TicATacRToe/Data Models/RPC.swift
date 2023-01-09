@@ -7,15 +7,22 @@
 
 import Foundation
 
-enum RPC: Codable {
+enum RPC {
+    case matchEnded
+    case opponentDevice(DeviceType)
+    case sessionData(Data)
+}
+
+extension RPC: Codable {
     enum Error: Swift.Error {
-        case badAvatarChoice
-        case badPositionChoice
         case badCommand
+        case badOpponentDeviceType
     }
 
-    case matchEnded
-    case sessionData(Data)
+    enum DeviceType: Int {
+        case device
+        case simulator
+    }
 
     init(from decoder: Decoder) throws {
         var decoder = try decoder.unkeyedContainer()
@@ -25,6 +32,12 @@ enum RPC: Codable {
             case 0:
                 self = .matchEnded
             case 1:
+                let rawOpponentDeviceType = try decoder.decode(Int.self)
+                guard let opponentDeviceType = DeviceType(rawValue: rawOpponentDeviceType) else {
+                    throw Error.badOpponentDeviceType
+                }
+                self = .opponentDevice(opponentDeviceType)
+            case 2:
                 self = .sessionData(try decoder.decode(Data.self))
             default:
                 throw Error.badCommand
@@ -35,8 +48,10 @@ enum RPC: Codable {
         switch self {
             case .matchEnded:
                 return 0
-            case .sessionData:
+            case .opponentDevice:
                 return 1
+            case .sessionData:
+                return 2
         }
     }
 
@@ -47,6 +62,8 @@ enum RPC: Codable {
         switch self {
             case .matchEnded:
                 break
+            case let .opponentDevice(deviceType):
+                try encoder.encode(deviceType.rawValue)
             case let .sessionData(data):
                 try encoder.encode(data)
         }

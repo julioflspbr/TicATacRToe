@@ -8,7 +8,7 @@
 #if targetEnvironment(simulator)
 import SceneKit
 
-@MainActor final class SceneController: GameControllerSceneDelegate {
+@MainActor final class SimulatorSceneController: GameControllerSceneDelegate {
     enum Error: Swift.Error {
         case gridNotDefined
     }
