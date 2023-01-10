@@ -56,6 +56,8 @@ final class GameController: ObservableObject {
         }
     }
 
+    private(set) var myColour = Actor.Colour.red
+
     private(set) var currentAvatar = Actor.Avatar.cross {
         didSet {
             Task { @MainActor in
@@ -78,7 +80,6 @@ final class GameController: ObservableObject {
         }
     }
 
-    private var colour = Actor.Colour.red
     private var state = [Actor.Avatar.cross: Set<Place.Position>(), Actor.Avatar.circle: Set<Place.Position>()]
 
     func alertRejection(opponent: String, recover: (@escaping () -> Void)) {
@@ -109,6 +110,12 @@ final class GameController: ObservableObject {
         }
     }
 
+    private func handleError(_ error: Swift.Error) {
+        Task { @MainActor in
+            self.interruptionDelegate?.handleError(error)
+        }
+    }
+
     private func showResults(me: String, opponent: String, result: Wins, recover: (@escaping () -> Void)) {
         Task { @MainActor in
             let title: String
@@ -125,26 +132,16 @@ final class GameController: ObservableObject {
             self.interruptionDelegate?.showAlert(title: title, description: description, actions: [okAction])
         }
     }
-
-    private func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) {
-        Task { @MainActor in
-            do {
-                try self.sceneDelegate?.strikeThrough(type, colour: colour)
-            } catch {
-                self.interruptionDelegate?.handleError(error)
-            }
-        }
-    }
 }
 
 extension GameController: BroadcastControllerGameDelegate {
     func didConnect(isHost: Bool) {
         Task { @MainActor in
             if isHost {
-                self.colour = .red
+                self.myColour = .red
                 self.sceneDelegate?.makeNewGrid()
             } else {
-                self.colour = .blue
+                self.myColour = .blue
                 self.myAvatar.toggle()
             }
         }
@@ -176,76 +173,71 @@ extension GameController: BroadcastControllerGameDelegate {
 
 extension GameController: SceneControllerGameDelegate {
     func didChangeOwner(isOwner: Bool) {
-        var avatar = self.myAvatar
-        if !isOwner {
-            avatar.toggle()
-        }
-        self.currentAvatar = avatar
+        self.currentAvatar = (isOwner ? self.myAvatar : self.myAvatar.opposite)
     }
 
-    func didPlaceActor() {
-        guard let state = self.state[self.currentAvatar] else {
-            return
-        }
-
-        let hasWinner: Bool
-        if state.contains(elements: [.topLeft, .top, .topRight]) {
-            self.strikeThrough(.horizontal(.top), colour: self.colour)
-            hasWinner = true
-        } else if state.contains(elements: [.left, .centre, .right]) {
-            self.strikeThrough(.horizontal(.centre), colour: self.colour)
-            hasWinner = true
-        } else if state.contains(elements: [.bottomLeft, .bottom, .bottomRight]) {
-            self.strikeThrough(.horizontal(.bottom), colour: self.colour)
-            hasWinner = true
-        } else if state.contains(elements: [.topLeft, .left, .bottomLeft]) {
-            self.strikeThrough(.vertical(.left), colour: self.colour)
-            hasWinner = true
-        } else if state.contains(elements: [.top, .centre, .bottom]) {
-            self.strikeThrough(.vertical(.centre), colour: self.colour)
-            hasWinner = true
-        } else if state.contains(elements: [.topRight, .right, .bottomRight]) {
-            self.strikeThrough(.vertical(.right), colour: self.colour)
-            hasWinner = true
-        } else if state.contains(elements: [.topLeft, .centre, .bottomRight]) {
-            self.strikeThrough(.diagonal(.leftTop), colour: self.colour)
-            hasWinner = true
-        } else if state.contains(elements: [.topRight, .centre, .bottomLeft]) {
-            self.strikeThrough(.diagonal(.rightTop), colour: self.colour)
-            hasWinner = true
-        } else {
-            hasWinner = false
-        }
-
-        if hasWinner {
-            if self.currentAvatar == self.myAvatar {
-                self.result.me += 1
-                Task { @MainActor in
-                    do {
-                        try self.sceneDelegate?.paintGrid(with: self.colour)
-                    } catch {
-                        self.interruptionDelegate?.handleError(error)
+    func didPlaceActor(at position: Place.Position) {
+        Task { @MainActor in
+            self.state[self.currentAvatar]?.insert(position)
+            let state = self.state[self.currentAvatar]!
+            
+            do {
+                let hasWinner: Bool
+                let isMyTurn = self.currentAvatar != self.myAvatar
+                let strikeThroughColour: Actor.Colour = (isMyTurn ? self.myColour : self.myColour.opposite)
+                if state.contains(elements: [.topLeft, .top, .topRight]) {
+                    try self.sceneDelegate?.strikeThrough(.horizontal(.top), colour: strikeThroughColour)
+                    hasWinner = true
+                } else if state.contains(elements: [.left, .centre, .right]) {
+                    try self.sceneDelegate?.strikeThrough(.horizontal(.centre), colour: strikeThroughColour)
+                    hasWinner = true
+                } else if state.contains(elements: [.bottomLeft, .bottom, .bottomRight]) {
+                    try self.sceneDelegate?.strikeThrough(.horizontal(.bottom), colour: strikeThroughColour)
+                    hasWinner = true
+                } else if state.contains(elements: [.topLeft, .left, .bottomLeft]) {
+                    try self.sceneDelegate?.strikeThrough(.vertical(.left), colour: strikeThroughColour)
+                    hasWinner = true
+                } else if state.contains(elements: [.top, .centre, .bottom]) {
+                    try self.sceneDelegate?.strikeThrough(.vertical(.centre), colour: strikeThroughColour)
+                    hasWinner = true
+                } else if state.contains(elements: [.topRight, .right, .bottomRight]) {
+                    try self.sceneDelegate?.strikeThrough(.vertical(.right), colour: strikeThroughColour)
+                    hasWinner = true
+                } else if state.contains(elements: [.topLeft, .centre, .bottomRight]) {
+                    try self.sceneDelegate?.strikeThrough(.diagonal(.leftTop), colour: strikeThroughColour)
+                    hasWinner = true
+                } else if state.contains(elements: [.topRight, .centre, .bottomLeft]) {
+                    try self.sceneDelegate?.strikeThrough(.diagonal(.rightTop), colour: strikeThroughColour)
+                    hasWinner = true
+                } else {
+                    hasWinner = false
+                }
+                
+                if hasWinner {
+                    if isMyTurn {
+                        self.result.me += 1
+                    } else {
+                        self.result.opponent += 1
+                    }
+                    try self.sceneDelegate?.paintGrid(with: strikeThroughColour)
+                }
+                
+                let allPlacesFilled = 9
+                let filledWithCircles = self.state[.circle]?.count ?? 0
+                let filledWithCrosses = self.state[.cross]?.count ?? 0
+                let isDraw = (filledWithCircles + filledWithCrosses == allPlacesFilled)
+                if hasWinner || isDraw {
+                    self.state[.cross]?.removeAll()
+                    self.state[.circle]?.removeAll()
+                    self.currentAvatar = .cross
+                    self.myAvatar.toggle()
+                    
+                    if self.myAvatar == .cross {
+                        self.sceneDelegate?.makeNewGrid()
                     }
                 }
-            } else {
-                self.result.opponent += 1
-            }
-        }
-
-        let allPlacesFilled = 9
-        let filledWithCircles = self.state[.circle]?.count ?? 0
-        let filledWithCrosses = self.state[.cross]?.count ?? 0
-        let isDraw = (filledWithCircles + filledWithCrosses == allPlacesFilled)
-        if hasWinner || isDraw {
-            self.state[.cross]?.removeAll()
-            self.state[.circle]?.removeAll()
-            self.currentAvatar = .cross
-            self.myAvatar.toggle()
-
-            Task { @MainActor in
-                if self.myAvatar == .cross {
-                    self.sceneDelegate?.makeNewGrid()
-                }
+            } catch {
+                self.handleError(error)
             }
         }
     }
@@ -260,11 +252,6 @@ private extension Set where Element == Place.Position {
 
 private extension Actor.Avatar {
     mutating func toggle() {
-        switch self {
-        case .circle:
-            self = .cross
-        case .cross:
-            self = .circle
-        }
+        self = self.opposite
     }
 }

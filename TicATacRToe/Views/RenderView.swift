@@ -30,12 +30,6 @@ struct RenderView: UIViewRepresentable {
     func makeUIView(context: Context) -> UIView {
         let sceneView = SCNView(frame: .zero, options: nil)
         context.coordinator.sceneView = sceneView
-
-        sceneView.scene = context.coordinator.scene
-        sceneView.backgroundColor = .black
-        sceneView.autoenablesDefaultLighting = true
-        sceneView.allowsCameraControl = false
-
         return sceneView
     }
 #else
@@ -69,7 +63,7 @@ struct RenderView: UIViewRepresentable {
     }
 
     static func dismantleUIView(_: UIView, coordinator: SceneCoordinator) {
-        coordinator.renderDelegate = nil
+        coordinator.clearRenderDelegate()
     }
 
     func makeCoordinator() -> SceneCoordinator {
@@ -93,7 +87,7 @@ extension RenderView: SceneControllerRenderDelegate {
     }
 }
 
-final class SceneCoordinator {
+@MainActor final class SceneCoordinator {
     var renderDelegate: SceneControllerRenderDelegate?
 
 #if targetEnvironment(simulator)
@@ -112,6 +106,11 @@ final class SceneCoordinator {
         self.sceneController?.adjustGrid(distance: distance, scale: scale)
     }
 
+    func clearRenderDelegate() {
+        self.sceneController?.renderDelegate = nil
+        self.renderDelegate = nil
+    }
+
     func defineGridPosition() throws {
         try self.sceneController?.defineGridPosition()
     }
@@ -121,16 +120,17 @@ final class SceneCoordinator {
     }
 
     func receive(command: RPC) {
-        self.sceneController?.receive(command: command)
-
-        if case let .opponentDevice(type) = command {
+        if case let .connected(type) = command {
             self.defineOpponentDevice(type: type)
         }
+        self.sceneController?.receive(command: command)
     }
 
     private func defineOpponentDevice(type: RPC.DeviceType) {
+        self.sceneController?.renderDelegate = nil
 #if targetEnvironment(simulator)
         self.sceneController = SimulatorSceneController()
+        self.sceneController?.sceneView = self.sceneView
 #else
         switch type {
             case .simulator:
@@ -138,7 +138,12 @@ final class SceneCoordinator {
             case .device:
                 self.sceneController = DeviceSceneController()
         }
+        self.sceneController?.arView = self.arView
 #endif
+        self.sceneController?.renderDelegate = self.renderDelegate
+        self.sceneController?.broadcastDelegate = self.broadcastDelegate
+        self.sceneController?.gameDelegate = self.gameDelegate
+        self.sceneController?.interruptionDelegate = self.interruptionDelegate
     }
 }
 
@@ -161,6 +166,14 @@ extension SceneCoordinator: GameControllerSceneDelegate {
 }
 
 extension SceneCoordinator: BroadcastControllerSceneDelegate {
+    var device: RPC.DeviceType {
+#if targetEnvironment(simulator)
+        .simulator
+#else
+        .device
+#endif
+    }
+
     func didBreakConnection() {
         self.sceneController?.didBreakConnection()
     }

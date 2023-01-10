@@ -9,16 +9,12 @@
 import RealityKit
 
 final class Place: Entity {
-    enum Position: String, Hashable {
-        case topLeft, top, topRight, left, centre, right, bottomLeft, bottom, bottomRight
-    }
-
-    private let position: Position
+    let placePosition: Position
 
     private var isFilled = false
 
     init(at position: Position) {
-        self.position = position
+        self.placePosition = position
         super.init()
         self.name = position.rawValue
 

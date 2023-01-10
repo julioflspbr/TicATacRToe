@@ -31,7 +31,6 @@ final class HybridSceneController: NSObject, SceneController {
         case connectivityNotSet
         case gridNotDefined
         case notAddingGrid
-        case placeNotDefined(Place.Position)
     }
 
     private let cameraReference = Entity()
@@ -101,7 +100,10 @@ final class HybridSceneController: NSObject, SceneController {
     }
 
     func handleTap(at point: CGPoint) throws {
-        try self.queryPlace(at: point)?.fill(with: .circle, colour: .blue)
+        guard let gameDelegate else {
+            return
+        }
+        try self.queryPlace(at: point)?.fill(with: gameDelegate.myAvatar, colour: gameDelegate.myColour)
     }
 
     private func handleError(_ error: Swift.Error) {
@@ -123,8 +125,8 @@ final class HybridSceneController: NSObject, SceneController {
     }
 
     private func reportAddedPlace(event: SceneEvents.DidAddEntity) {
-        if event.entity is Place {
-            self.gameDelegate?.didPlaceActor()
+        if let place = event.entity as? Place {
+            self.gameDelegate?.didPlaceActor(at: place.placePosition)
         }
     }
 
@@ -158,14 +160,16 @@ extension HybridSceneController: ARSessionDelegate {
 }
 
 extension HybridSceneController: GameControllerSceneDelegate {
-    @MainActor func deleteAllGrids() {
+    func deleteAllGrids() {
         self.arView.scene.anchors.forEach { element in
             element.removeFromParent()
         }
     }
 
-    @MainActor func makeNewGrid() {
-        self.renderDelegate?.didChangeGridStatus(isDefined: false)
+    func makeNewGrid() {
+        Task { @MainActor in
+            self.renderDelegate?.didChangeGridStatus(isDefined: false)
+        }
 
         let grid = Grid()
         grid.position.z = -self.gridDistance
@@ -180,14 +184,14 @@ extension HybridSceneController: GameControllerSceneDelegate {
             .sink(receiveValue: self.sceneUpdate(event:))
     }
 
-    @MainActor func paintGrid(with colour: Actor.Colour) throws {
+    func paintGrid(with colour: Actor.Colour) throws {
         guard let currentGrid else {
             throw Error.gridNotDefined
         }
         currentGrid.paintGrid(with: colour)
     }
 
-    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws -> Void {
+    func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws -> Void {
         guard let currentGrid else {
             throw Error.gridNotDefined
         }
@@ -223,6 +227,10 @@ extension HybridSceneController: GameControllerSceneDelegate {
 }
 
 extension HybridSceneController: BroadcastControllerSceneDelegate {
+    var device: RPC.DeviceType {
+        .device
+    }
+
     func didBreakConnection() {
         self.arView.session.pause()
         self.arView.session.delegate = nil
@@ -230,17 +238,18 @@ extension HybridSceneController: BroadcastControllerSceneDelegate {
     }
 
     func didEstablishConnection() {
-        let configuration = ARWorldTrackingConfiguration()
-        configuration.environmentTexturing = .automatic
-        configuration.isCollaborationEnabled = true
-
-        self.arView.session.run(configuration)
-        self.arView.session.delegate = self
-
         do {
             guard let session = self.broadcastDelegate?.session else {
                 throw Error.connectivityNotSet
             }
+
+            let configuration = ARWorldTrackingConfiguration()
+            configuration.environmentTexturing = .automatic
+            configuration.isCollaborationEnabled = true
+
+            self.arView.session.run(configuration)
+            self.arView.session.delegate = self
+
             self.arView.scene.synchronizationService = try MultipeerConnectivityService(session: session)
         } catch {
             self.handleError(error)

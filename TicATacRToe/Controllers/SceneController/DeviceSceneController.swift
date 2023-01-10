@@ -31,7 +31,7 @@ final class DeviceSceneController: NSObject, SceneController {
         case connectivityNotSet
         case gridNotDefined
         case notAddingGrid
-        case placeNotDefined(Place.Position)
+        case ownershipTransferError
     }
 
     private let cameraReference = Entity()
@@ -60,10 +60,15 @@ final class DeviceSceneController: NSObject, SceneController {
 
     private var addingGrid: Grid?
     private var cancellables = Set<AnyCancellable>()
-    private var currentGrid: Grid?
     private var gridDistance: Float = Constraints.Distance.default
     private var gridScale: Float = Constraints.Scale.default
     private var sceneUpdateCancellable: AnyCancellable?
+
+    private var connectivity: MultipeerConnectivityService? {
+        self.arView.scene.synchronizationService as? MultipeerConnectivityService
+    }
+
+    private weak var currentGrid: Grid!
 
     func adjustGrid(distance: Float, scale: Float) {
         guard self.addingGrid != nil else {
@@ -101,13 +106,27 @@ final class DeviceSceneController: NSObject, SceneController {
     }
 
     func handleTap(at point: CGPoint) throws {
-        try self.queryPlace(at: point)?.fill(with: .circle, colour: .blue)
+        guard let gameDelegate, self.currentGrid?.isOwner == true else {
+            return
+        }
+        guard let place = try self.queryPlace(at: point) else {
+            return
+        }
+        place.fill(with: gameDelegate.myAvatar, colour: gameDelegate.myColour)
+        self.broadcastDelegate?.send(command: .placedActor(place.placePosition), reliable: true)
     }
 
     private func handleError(_ error: Swift.Error) {
         Task { @MainActor in
             self.interruptionDelegate?.handleError(error)
         }
+    }
+
+    private func handleOwnershipChange(event: SynchronizationEvents.OwnershipChanged) {
+        guard let place = event.entity as? Place else {
+            return
+        }
+        self.gameDelegate?.didChangeOwner(isOwner: place.isOwner)
     }
 
     private func queryPlace(at point: CGPoint) throws -> Place? {
@@ -118,19 +137,37 @@ final class DeviceSceneController: NSObject, SceneController {
         return queryResults.compactMap({ $0.entity as? Place }).first
     }
 
-    private func handleOwnershipChange(event: SynchronizationEvents.OwnershipChanged) {
-        self.gameDelegate?.didChangeOwner(isOwner: event.entity.isOwner)
+    private func reportAddedPlace(event: SceneEvents.DidAddEntity) {
+        if let place = event.entity as? Place {
+            self.gameDelegate?.didPlaceActor(at: place.placePosition)
+        }
     }
 
-    private func reportAddedPlace(event: SceneEvents.DidAddEntity) {
-        if event.entity is Place {
-            self.gameDelegate?.didPlaceActor()
+    private func requestOwnership() {
+        guard let currentGrid else {
+            self.handleError(Error.gridNotDefined)
+            return
+        }
+        currentGrid.requestOwnership { [weak self] failure in
+            if case .timedOut = failure {
+                self?.handleError(Error.ownershipTransferError)
+            }
         }
     }
 
     private func sceneUpdate(event: SceneEvents.Update) {
         self.addingGrid?.position.z = -self.gridDistance
         self.addingGrid?.scale = [self.gridScale, self.gridScale, 1.0]
+    }
+
+    private func updateSession(with data: Data) {
+        do {
+            if let collabotationData = try NSKeyedUnarchiver.unarchivedObject(ofClass: ARSession.CollaborationData.self, from: data) {
+                self.arView.session.update(with: collabotationData)
+            }
+        } catch {
+            self.handleError(error)
+        }
     }
 }
 
@@ -158,14 +195,16 @@ extension DeviceSceneController: ARSessionDelegate {
 }
 
 extension DeviceSceneController: GameControllerSceneDelegate {
-    @MainActor func deleteAllGrids() {
+    func deleteAllGrids() {
         self.arView.scene.anchors.forEach { element in
             element.removeFromParent()
         }
     }
 
-    @MainActor func makeNewGrid() {
-        self.renderDelegate?.didChangeGridStatus(isDefined: false)
+    func makeNewGrid() {
+        Task { @MainActor in
+            self.renderDelegate?.didChangeGridStatus(isDefined: false)
+        }
 
         let grid = Grid()
         grid.position.z = -self.gridDistance
@@ -180,14 +219,14 @@ extension DeviceSceneController: GameControllerSceneDelegate {
             .sink(receiveValue: self.sceneUpdate(event:))
     }
 
-    @MainActor func paintGrid(with colour: Actor.Colour) throws {
+    func paintGrid(with colour: Actor.Colour) throws {
         guard let currentGrid else {
             throw Error.gridNotDefined
         }
         currentGrid.paintGrid(with: colour)
     }
 
-    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws -> Void {
+    func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws -> Void {
         guard let currentGrid else {
             throw Error.gridNotDefined
         }
@@ -223,40 +262,47 @@ extension DeviceSceneController: GameControllerSceneDelegate {
 }
 
 extension DeviceSceneController: BroadcastControllerSceneDelegate {
+    var device: RPC.DeviceType {
+        .device
+    }
+
     func didBreakConnection() {
+        self.connectivity?.stopSync()
+
         self.arView.session.pause()
         self.arView.session.delegate = nil
         self.arView.scene.synchronizationService = nil
     }
 
     func didEstablishConnection() {
-        let configuration = ARWorldTrackingConfiguration()
-        configuration.environmentTexturing = .automatic
-        configuration.isCollaborationEnabled = true
-
-        self.arView.session.run(configuration)
-        self.arView.session.delegate = self
-
         do {
             guard let session = self.broadcastDelegate?.session else {
                 throw Error.connectivityNotSet
             }
-            self.arView.scene.synchronizationService = try MultipeerConnectivityService(session: session)
+
+            let configuration = ARWorldTrackingConfiguration()
+            configuration.environmentTexturing = .automatic
+            configuration.isCollaborationEnabled = true
+
+            let connectivity = try MultipeerConnectivityService(session: session)
+            connectivity.startSync()
+
+            self.arView.session.run(configuration)
+            self.arView.session.delegate = self
+            self.arView.scene.synchronizationService = connectivity
         } catch {
             self.handleError(error)
         }
     }
 
     func receive(command: RPC) {
-        guard case let .sessionData(data) = command else {
-            return
-        }
-        do {
-            if let collabotationData = try NSKeyedUnarchiver.unarchivedObject(ofClass: ARSession.CollaborationData.self, from: data) {
-                self.arView.session.update(with: collabotationData)
-            }
-        } catch {
-            self.handleError(error)
+        switch command {
+            case let .sessionData(data):
+                self.updateSession(with: data)
+            case .placedActor:
+                self.requestOwnership()
+            default:
+                break
         }
     }
 }

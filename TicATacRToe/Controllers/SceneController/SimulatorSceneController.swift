@@ -8,20 +8,177 @@
 #if targetEnvironment(simulator)
 import SceneKit
 
-@MainActor final class SimulatorSceneController: GameControllerSceneDelegate {
+final class SimulatorSceneController: SceneController {
     enum Error: Swift.Error {
         case gridNotDefined
+        case notAddingGrid
+        case wrongPlace
     }
 
-    let scene: SCNScene
+    var broadcastDelegate: SceneControllerBroadcastDelegate?
+    var gameDelegate: SceneControllerGameDelegate?
+    var interruptionDelegate: SceneControllerInterruptionDelegate?
+    var renderDelegate: SceneControllerRenderDelegate?
 
-    weak var gameDelegate: SceneControllerGameDelegate?
-    weak var sceneView: SCNView?
+    weak var sceneView: SCNView! {
+        didSet {
+            self.sceneView.backgroundColor = .black
+            self.sceneView.autoenablesDefaultLighting = true
+            self.sceneView.allowsCameraControl = false
+        }
+    }
 
-    private var grid: Grid?
+    private var addingGrid: Grid?
+    private var isOwner = false
 
-    init() {
-        self.scene = SCNScene()
+    private weak var currentGrid: Grid!
+
+    @MainActor func adjustGrid(distance: Float, scale: Float) {
+        guard self.addingGrid != nil else {
+            return
+        }
+        // the grid does not move on simulator
+        print("Adjust grid on Simulator - distance: \(distance), scale: \(scale)")
+    }
+
+    @MainActor func defineGridPosition() throws {
+        guard let addingGrid else {
+            throw Error.notAddingGrid
+        }
+        self.sceneView.scene?.rootNode.addChildNode(addingGrid)
+        self.currentGrid = addingGrid
+        self.addingGrid = nil
+        self.isOwner = true
+
+        self.broadcastDelegate?.send(command: .gridDefined, reliable: true)
+        Task { @MainActor in
+            self.renderDelegate?.didChangeGridStatus(isDefined: true)
+        }
+    }
+
+    @MainActor func handleTap(at point: CGPoint) throws {
+        guard let gameDelegate, self.isOwner else {
+            return
+        }
+        guard let place = try self.queryPlace(at: point) else {
+            return
+        }
+        place.fill(with: gameDelegate.myAvatar, colour: gameDelegate.myColour)
+        gameDelegate.didPlaceActor(at: place.placePosition)
+        self.broadcastDelegate?.send(command: .placedActor(place.placePosition), reliable: true)
+        self.isOwner = false
+        self.gameDelegate?.didChangeOwner(isOwner: false)
+    }
+
+    @MainActor private func placeOpponent(at position: Place.Position) {
+        do {
+            guard let currentGrid else {
+                throw Error.gridNotDefined
+            }
+            guard let place = currentGrid.findPlace(at: position) else {
+                throw Error.wrongPlace
+            }
+            guard let gameDelegate else {
+                return
+            }
+            place.fill(with: gameDelegate.myAvatar.opposite, colour: gameDelegate.myColour.opposite)
+            gameDelegate.didPlaceActor(at: position)
+
+            self.isOwner = true
+            self.gameDelegate?.didChangeOwner(isOwner: true)
+        } catch {
+            self.interruptionDelegate?.handleError(error)
+        }
+    }
+
+    private func queryPlace(at point: CGPoint) throws -> Place? {
+        guard self.currentGrid != nil else {
+            throw Error.gridNotDefined
+        }
+        let hitTestResults = self.sceneView.hitTest(point)
+        return hitTestResults.compactMap({ $0.node.parent as? Place }).first
+    }
+
+    @MainActor private func spawnGridAsTenant() {
+        self.currentGrid?.removeFromParentNode()
+        
+        let grid = Grid()
+        self.sceneView.scene?.rootNode.addChildNode(grid)
+        self.currentGrid = grid
+        self.isOwner = false
+        self.gameDelegate?.didChangeOwner(isOwner: false)
+    }
+}
+
+extension SimulatorSceneController: GameControllerSceneDelegate {
+    @MainActor func deleteAllGrids() {
+        self.currentGrid?.removeFromParentNode()
+        self.currentGrid = nil
+    }
+
+    @MainActor func makeNewGrid() {
+        Task { @MainActor in
+            self.renderDelegate?.didChangeGridStatus(isDefined: false)
+        }
+        self.currentGrid?.removeFromParentNode()
+        self.currentGrid = nil
+        self.addingGrid = Grid()
+    }
+
+    @MainActor func paintGrid(with colour: Actor.Colour) throws {
+        guard let currentGrid else {
+            throw Error.gridNotDefined
+        }
+        currentGrid.paintGrid(with: colour)
+    }
+
+    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws {
+        guard let currentGrid else {
+            throw Error.gridNotDefined
+        }
+
+        let shift: Float = 0.34
+        let strikeThrough = StrikeThrough(type: type, colour: colour)
+
+        switch type {
+            case let .horizontal(position):
+                switch position {
+                    case .top:
+                        strikeThrough.position = SCNVector3([0.0, shift, 0.0])
+                    case .centre:
+                        strikeThrough.position = SCNVector3([0.0, 0.0, 0.0])
+                    case .bottom:
+                        strikeThrough.position = SCNVector3([0.0, -shift, 0.0])
+                }
+            case let .vertical(position):
+                switch position {
+                    case .left:
+                        strikeThrough.position = SCNVector3([-shift, 0.0, 0.0])
+                    case .centre:
+                        strikeThrough.position = SCNVector3([0.0, 0.0, 0.0])
+                    case .right:
+                        strikeThrough.position = SCNVector3([shift, 0.0, 0.0])
+                }
+            case .diagonal:
+                strikeThrough.position = SCNVector3([0.0, 0.0, 0.0])
+        }
+
+        currentGrid.addChildNode(strikeThrough)
+    }
+}
+
+extension SimulatorSceneController: BroadcastControllerSceneDelegate {
+    var device: RPC.DeviceType {
+        .simulator
+    }
+
+    @MainActor func didBreakConnection() {
+        self.sceneView.scene = nil
+        self.broadcastDelegate?.sessionDidDisconnect()
+    }
+
+    @MainActor func didEstablishConnection() {
+        let scene = SCNScene()
 
         let camera = SCNCamera()
         camera.automaticallyAdjustsZRange = true
@@ -29,125 +186,26 @@ import SceneKit
         let cameraNode = SCNNode()
         cameraNode.position.z = 2.5
         cameraNode.camera = camera
-        self.scene.rootNode.addChildNode(cameraNode)
+
+        scene.rootNode.addChildNode(cameraNode)
+        self.sceneView.scene = scene
     }
 
-    func defineGridPosition() throws {
-        guard let grid else {
-            throw Error.gridNotDefined
-        }
-        // simulate simulator defining grid position
-
-        Task { @MainActor in
-            let attemptCount = 5
-            let finalAttempt = 4
-            var positionDefined = SIMD3<Float>()
-
-            for i in 0 ..< attemptCount {
-                if i < finalAttempt {
-                    try await Task.sleep(nanoseconds: 200 * NSEC_PER_MSEC)
-                    let fakeX = Float.random(in: -100.0 ... 100.0)
-                    let fakeY = Float.random(in: -100.0 ... 100.0)
-                    let fakeZ = Float.random(in: -100.0 ... 100.0)
-                    positionDefined = SIMD3<Float>(x: fakeX, y: fakeY, z: fakeZ)
-
-                    print("Moving grid at: \(positionDefined)")
-                    self.gameDelegate?.didMoveGrid(by: positionDefined)
-                } else {
-                    print("Grid defined at: \(positionDefined)")
-                    self.gameDelegate?.didDefineGridPosition(at: positionDefined)
-
-                    // but it is the simulator, we only want the grid visible on the screen
-                    self.scene.rootNode.addChildNode(grid)
+    func receive(command: RPC) {
+        switch command {
+            case .gridDefined:
+                Task { @MainActor in
+                    self.spawnGridAsTenant()
                 }
-            }
-        }
-    }
-
-    func deleteAllGrids() {
-        self.grid?.removeFromParentNode()
-        self.grid = nil
-    }
-
-    func makeNewGrid() {
-        self.grid?.removeFromParentNode()
-        let grid = Grid()
-        self.grid = grid
-    }
-
-    func moveGrid(by position: SIMD3<Float>) throws {
-        guard let grid else {
-            throw Error.gridNotDefined
-        }
-
-        // nothing to do on simulator, except throwing the appropriate error if necessary
-        print("Moving grid at: \(position)")
-
-        // but it is the simulator, we only want the grid visible on the screen
-        self.scene.rootNode.addChildNode(grid)
-    }
-
-    func queryPlace(for place: Place.Position) throws -> Place {
-        guard let grid else {
-            throw Error.gridNotDefined
-        }
-
-        switch place {
-            case .topLeft:
-                return grid.topLeftPlaceNode
-            case .top:
-                return grid.topPlaceNode
-            case .topRight:
-                return grid.topRightPlaceNode
-            case .left:
-                return grid.leftPlaceNode
-            case .centre:
-                return grid.centrePlaceNode
-            case .right:
-                return grid.rightPlaceNode
-            case .bottomLeft:
-                return grid.bottomLeftPlaceNode
-            case .bottom:
-                return grid.bottomPlaceNode
-            case .bottomRight:
-                return grid.bottomRightPlaceNode
-        }
-    }
-
-    func queryPlace(at point: CGPoint) -> Place? {
-        let hitTestResults = self.sceneView?.hitTest(point)
-        let results = hitTestResults?.compactMap({ $0.node.parent as? Place })
-        return results?.first
-    }
-
-    func strikeThrough(_ type: StrikeThrough.StrikeType) {
-        let shift: Float = 0.33
-        let strikeThrough = StrikeThrough(type: type)
-
-        switch type {
-            case let .horizontal(position):
-                switch position {
-                    case .top:
-                        strikeThrough.position = SCNVector3(0.0, shift, 0.0)
-                    case .centre:
-                        strikeThrough.position = SCNVector3(0.0, 0.0, 0.0)
-                    case .bottom:
-                        strikeThrough.position = SCNVector3(0.0, -shift, 0.0)
+            case let .placedActor(position):
+                Task { @MainActor in
+                    self.placeOpponent(at: position)
                 }
-            case let .vertical(position):
-                switch position {
-                    case .left:
-                        strikeThrough.position = SCNVector3(-shift, 0.0, 0.0)
-                    case .centre:
-                        strikeThrough.position = SCNVector3(0.0, 0.0, 0.0)
-                    case .right:
-                        strikeThrough.position = SCNVector3(shift, 0.0, 0.0)
-                }
-            case .diagonal:
-                strikeThrough.position = SCNVector3(0.0, 0.0, 0.0)
+            case .connected:
+                self.broadcastDelegate?.sessionDidConnect()
+            default:
+                break
         }
-
-        self.grid?.addChildNode(strikeThrough)
     }
 }
 #endif

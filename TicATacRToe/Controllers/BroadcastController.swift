@@ -18,9 +18,12 @@ protocol BroadcastControllerInformationDelegate: AnyObject {
 }
 
 protocol BroadcastControllerSceneDelegate: AnyObject {
-    func didBreakConnection()
-    func didEstablishConnection()
+    var device: RPC.DeviceType { get }
+
     func receive(command: RPC)
+
+    @MainActor func didBreakConnection()
+    @MainActor func didEstablishConnection()
 }
 
 protocol BroadcastControllerGameDelegate: AnyObject {
@@ -110,9 +113,16 @@ final class BroadcastController: NSObject, ObservableObject {
     }
 
     private func receive(command: RPC) {
-        if case .matchEnded = command {
-            self.isDisconnectionExpected = true
-            self.session?.disconnect()
+        switch command {
+            case .connected:
+                Task { @MainActor in
+                    self.sceneDelegate?.didEstablishConnection()
+                }
+            case .matchEnded:
+                self.isDisconnectionExpected = true
+                self.session?.disconnect()
+            default:
+                break
         }
     }
 
@@ -213,7 +223,6 @@ extension BroadcastController: InformationControllerBroadcastDelegate {
                 self?.myPeerID = nil
             }
 
-            self?.startBroadcasting()
             self?.connectionDebouncer = nil
         }
     }
@@ -279,9 +288,13 @@ extension BroadcastController: MCSessionDelegate {
         if state == .connected {
             self.opponent = peerID
             self.finishDiscovery()
-            self.sceneDelegate?.didEstablishConnection()
+            if let sceneDelegate {
+                self.send(command: .connected(sceneDelegate.device), reliable: true)
+            }
         } else if state == .notConnected {
-            self.sceneDelegate?.didBreakConnection()
+            Task { @MainActor in
+                self.sceneDelegate?.didBreakConnection()
+            }
             self.reset()
         }
         self.connectionState = state
@@ -295,8 +308,8 @@ extension BroadcastController: MCSessionDelegate {
         do {
             let decoder = JSONDecoder()
             let command = try decoder.decode(RPC.self, from: data)
-            self.receive(command: command)
             self.sceneDelegate?.receive(command: command)
+            self.receive(command: command)
         } catch {
             self.handleError(error)
         }

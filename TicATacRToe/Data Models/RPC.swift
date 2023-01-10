@@ -9,14 +9,19 @@ import Foundation
 
 enum RPC {
     case matchEnded
-    case opponentDevice(DeviceType)
+    case connected(DeviceType)
+    case placedActor(Place.Position)
     case sessionData(Data)
+
+    // for simulator
+    case gridDefined
 }
 
 extension RPC: Codable {
     enum Error: Swift.Error {
         case badCommand
         case badOpponentDeviceType
+        case badPlacePosition
     }
 
     enum DeviceType: Int {
@@ -36,9 +41,17 @@ extension RPC: Codable {
                 guard let opponentDeviceType = DeviceType(rawValue: rawOpponentDeviceType) else {
                     throw Error.badOpponentDeviceType
                 }
-                self = .opponentDevice(opponentDeviceType)
+                self = .connected(opponentDeviceType)
             case 2:
+                let rawPlacePosition = try decoder.decode(String.self)
+                guard let placePosition = Place.Position(rawValue: rawPlacePosition) else {
+                    throw Error.badPlacePosition
+                }
+                self = .placedActor(placePosition)
+            case 3:
                 self = .sessionData(try decoder.decode(Data.self))
+            case 4:
+                self = .gridDefined
             default:
                 throw Error.badCommand
         }
@@ -48,10 +61,14 @@ extension RPC: Codable {
         switch self {
             case .matchEnded:
                 return 0
-            case .opponentDevice:
+            case .connected:
                 return 1
-            case .sessionData:
+            case .placedActor:
                 return 2
+            case .sessionData:
+                return 3
+            case .gridDefined:
+                return 4
         }
     }
 
@@ -60,12 +77,14 @@ extension RPC: Codable {
         try encoder.encode(self.rawValue)
 
         switch self {
-            case .matchEnded:
-                break
-            case let .opponentDevice(deviceType):
+            case let .connected(deviceType):
                 try encoder.encode(deviceType.rawValue)
+            case let .placedActor(position):
+                try encoder.encode(position.rawValue)
             case let .sessionData(data):
                 try encoder.encode(data)
+            default:
+                break
         }
     }
 }

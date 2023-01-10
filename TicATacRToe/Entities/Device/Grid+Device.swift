@@ -26,6 +26,7 @@ final class Grid: Entity {
         super.init()
         self.addChild(self.grid)
         self.makeGrid(colour: .white)
+        self.makePlaces()
     }
 
     func findPlace(at position: Place.Position) -> Place? {
@@ -46,28 +47,30 @@ final class Grid: Entity {
 
         let verticalStripeMesh = MeshResource.generatePlane(width: stripeThickness, height: stripeLength)
         let horizontalStripeMesh = MeshResource.generatePlane(width: stripeLength, height: stripeThickness)
-        let whiteMaterial = UnlitMaterial(color: .white)
+        let gridMaterial = UnlitMaterial(color: colour)
 
         // top stripe
-        let topStripe = ModelEntity(mesh: horizontalStripeMesh, materials: [whiteMaterial])
+        let topStripe = ModelEntity(mesh: horizontalStripeMesh, materials: [gridMaterial])
         topStripe.position.y = stripePosition
         self.grid.addChild(topStripe)
 
         // left stripe
-        let leftStripe = ModelEntity(mesh: verticalStripeMesh, materials: [whiteMaterial])
+        let leftStripe = ModelEntity(mesh: verticalStripeMesh, materials: [gridMaterial])
         leftStripe.position.x = -stripePosition
         self.grid.addChild(leftStripe)
 
         // right stripe
-        let rightStripe = ModelEntity(mesh: verticalStripeMesh, materials: [whiteMaterial])
+        let rightStripe = ModelEntity(mesh: verticalStripeMesh, materials: [gridMaterial])
         rightStripe.position.x = stripePosition
         self.grid.addChild(rightStripe)
 
         // bottom stripe
-        let bottomStripe = ModelEntity(mesh: horizontalStripeMesh, materials: [whiteMaterial])
+        let bottomStripe = ModelEntity(mesh: horizontalStripeMesh, materials: [gridMaterial])
         bottomStripe.position.y = -stripePosition
         self.grid.addChild(bottomStripe)
+    }
 
+    private func makePlaces() {
         let position: Float = 0.34
 
         // top left placement

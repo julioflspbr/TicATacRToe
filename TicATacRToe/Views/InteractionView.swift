@@ -10,7 +10,7 @@ import SwiftUI
 struct InteractiveView: View {
     @State private var deltaDistance: CGFloat = 0.0
     @State private var deltaScale: CGFloat = 0.0
-    @State private var isGridDefined = false
+    @State private var isGridDefined = true
     @State private var tapPoint: CGPoint?
 
     var body: some View {

@@ -15,7 +15,9 @@ protocol SceneControllerBroadcastDelegate: AnyObject {
 }
 
 protocol SceneControllerGameDelegate: AnyObject {
-    func didPlaceActor()
+    var myAvatar: Actor.Avatar { get }
+    var myColour: Actor.Colour { get }
+    func didPlaceActor(at: Place.Position)
     func didChangeOwner(isOwner: Bool)
 }
 
