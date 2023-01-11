@@ -25,8 +25,8 @@ protocol SceneController: GameControllerSceneDelegate, BroadcastControllerSceneD
     var arView: ARView! { get set }
 #endif
 
-    func adjustGrid(distance: Float, scale: Float)
-    func defineGridPosition() throws
-    func handleTap(at point: CGPoint) throws
+    @MainActor func adjustGrid(distance: Float, scale: Float)
+    @MainActor func defineGridPosition() throws
+    @MainActor func handleTap(at point: CGPoint)
 
 }

@@ -41,25 +41,25 @@ struct RenderView: UIViewRepresentable {
 #endif
 
     func updateUIView(_: UIView, context: Context) {
-        do {
-            if let tapPoint {
-                Task {
-                    self.tapPoint = nil
-                }
+        if let tapPoint {
+            Task {
+                self.tapPoint = nil
                 if self.isGridDefined {
-                    try context.coordinator.handleTap(at: tapPoint)
+                    context.coordinator.handleTap(at: tapPoint)
                 }
             }
-            if self.isGridDefined && !self.isGridDefinitionMethodTriggered {
-                Task {
-                    self.isGridDefinitionMethodTriggered = true
-                }
-                try context.coordinator.defineGridPosition()
-            }
-            context.coordinator.adjustGrid(distance: Float(self.deltaDistance), scale: Float(self.deltaScale))
-        } catch {
-            self.interruptionController.handleError(error)
         }
+        if self.isGridDefined && !self.isGridDefinitionMethodTriggered {
+            Task {
+                self.isGridDefinitionMethodTriggered = true
+                do {
+                    try context.coordinator.defineGridPosition()
+                } catch {
+                    self.interruptionController.handleError(error)
+                }
+            }
+        }
+        context.coordinator.adjustGrid(distance: Float(self.deltaDistance), scale: Float(self.deltaScale))
     }
 
     static func dismantleUIView(_: UIView, coordinator: SceneCoordinator) {
@@ -115,8 +115,8 @@ extension RenderView: SceneControllerRenderDelegate {
         try self.sceneController?.defineGridPosition()
     }
 
-    func handleTap(at point: CGPoint) throws {
-        try self.sceneController?.handleTap(at: point)
+    func handleTap(at point: CGPoint) {
+        self.sceneController?.handleTap(at: point)
     }
 
     func receive(command: RPC) {

@@ -29,7 +29,6 @@ final class DeviceSceneController: NSObject, SceneController {
 
     enum Error: Swift.Error {
         case connectivityNotSet
-        case gridNotDefined
         case notAddingGrid
         case ownershipTransferError
     }
@@ -38,30 +37,15 @@ final class DeviceSceneController: NSObject, SceneController {
 
     var renderDelegate: SceneControllerRenderDelegate?
 
+    weak var arView: ARView!
     weak var broadcastDelegate: SceneControllerBroadcastDelegate?
     weak var gameDelegate: SceneControllerGameDelegate?
     weak var interruptionDelegate: SceneControllerInterruptionDelegate?
 
-    weak var arView: ARView! {
-        didSet {
-            self.cancellables.removeAll()
-
-            self.arView.scene
-                .publisher(for: SynchronizationEvents.OwnershipChanged.self)
-                .sink(receiveValue: self.handleOwnershipChange(event:))
-                .store(in: &self.cancellables)
-
-            self.arView.scene
-                .publisher(for: SceneEvents.DidAddEntity.self)
-                .sink(receiveValue: self.reportAddedPlace(event:))
-                .store(in: &self.cancellables)
-        }
-    }
-
     private var addingGrid: Grid?
     private var cancellables = Set<AnyCancellable>()
-    private var gridDistance: Float = Constraints.Distance.default
-    private var gridScale: Float = Constraints.Scale.default
+    private var gridDistance = Constraints.Distance.default
+    private var gridScale = Constraints.Scale.default
     private var sceneUpdateCancellable: AnyCancellable?
 
     private var connectivity: MultipeerConnectivityService? {
@@ -96,20 +80,19 @@ final class DeviceSceneController: NSObject, SceneController {
 
         self.gridDistance = Constraints.Scale.default
         self.gridScale = Constraints.Scale.default
+        self.sceneUpdateCancellable = nil
         self.addingGrid = nil
 
         Task { @MainActor in
             self.renderDelegate?.didChangeGridStatus(isDefined: true)
         }
-
-        self.sceneUpdateCancellable = nil
     }
 
-    func handleTap(at point: CGPoint) throws {
+    func handleTap(at point: CGPoint) {
         guard let gameDelegate, self.currentGrid?.isOwner == true else {
             return
         }
-        guard let place = try self.queryPlace(at: point) else {
+        guard let place = self.queryPlace(at: point), place.parent == self.currentGrid else {
             return
         }
         place.fill(with: gameDelegate.myAvatar, colour: gameDelegate.myColour)
@@ -129,26 +112,19 @@ final class DeviceSceneController: NSObject, SceneController {
         self.gameDelegate?.didChangeOwner(isOwner: place.isOwner)
     }
 
-    private func queryPlace(at point: CGPoint) throws -> Place? {
-        guard self.currentGrid != nil else {
-            throw Error.gridNotDefined
-        }
+    private func queryPlace(at point: CGPoint) -> Place? {
         let queryResults = self.arView.hitTest(point, query: .nearest, mask: .all)
         return queryResults.compactMap({ $0.entity as? Place }).first
     }
 
-    private func reportAddedPlace(event: SceneEvents.DidAddEntity) {
-        if let place = event.entity as? Place {
+    private func reportAddedActor(event: SceneEvents.DidAddEntity) {
+        if let actor = event.entity as? Actor, let place = actor.parent as? Place, place.isOwner {
             self.gameDelegate?.didPlaceActor(at: place.placePosition)
         }
     }
 
     private func requestOwnership() {
-        guard let currentGrid else {
-            self.handleError(Error.gridNotDefined)
-            return
-        }
-        currentGrid.requestOwnership { [weak self] failure in
+        self.currentGrid.requestOwnership { [weak self] failure in
             if case .timedOut = failure {
                 self?.handleError(Error.ownershipTransferError)
             }
@@ -196,6 +172,9 @@ extension DeviceSceneController: ARSessionDelegate {
 
 extension DeviceSceneController: GameControllerSceneDelegate {
     func deleteAllGrids() {
+        self.sceneUpdateCancellable = nil
+        self.cancellables.removeAll()
+
         self.arView.scene.anchors.forEach { element in
             element.removeFromParent()
         }
@@ -220,17 +199,10 @@ extension DeviceSceneController: GameControllerSceneDelegate {
     }
 
     func paintGrid(with colour: Actor.Colour) throws {
-        guard let currentGrid else {
-            throw Error.gridNotDefined
-        }
-        currentGrid.paintGrid(with: colour)
+        self.currentGrid.paintGrid(with: colour)
     }
 
     func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws -> Void {
-        guard let currentGrid else {
-            throw Error.gridNotDefined
-        }
-
         let shift: Float = 0.34
         let strikeThrough = StrikeThrough(type: type, colour: colour)
 
@@ -257,7 +229,7 @@ extension DeviceSceneController: GameControllerSceneDelegate {
                 strikeThrough.position = [0.0, 0.0, 0.0]
         }
 
-        currentGrid.addChild(strikeThrough)
+        self.currentGrid.addChild(strikeThrough)
     }
 }
 
@@ -267,6 +239,8 @@ extension DeviceSceneController: BroadcastControllerSceneDelegate {
     }
 
     func didBreakConnection() {
+        self.sceneUpdateCancellable = nil
+        self.cancellables.removeAll()
         self.connectivity?.stopSync()
 
         self.arView.session.pause()
@@ -290,6 +264,18 @@ extension DeviceSceneController: BroadcastControllerSceneDelegate {
             self.arView.session.run(configuration)
             self.arView.session.delegate = self
             self.arView.scene.synchronizationService = connectivity
+
+            self.cancellables.removeAll()
+
+            self.arView.scene
+                .publisher(for: SynchronizationEvents.OwnershipChanged.self)
+                .sink(receiveValue: self.handleOwnershipChange(event:))
+                .store(in: &self.cancellables)
+
+            self.arView.scene
+                .publisher(for: SceneEvents.DidAddEntity.self)
+                .sink(receiveValue: self.reportAddedActor(event:))
+                .store(in: &self.cancellables)
         } catch {
             self.handleError(error)
         }

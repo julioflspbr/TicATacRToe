@@ -10,7 +10,6 @@ import SceneKit
 
 final class SimulatorSceneController: SceneController {
     enum Error: Swift.Error {
-        case gridNotDefined
         case notAddingGrid
         case wrongPlace
     }
@@ -51,31 +50,26 @@ final class SimulatorSceneController: SceneController {
         self.isOwner = true
 
         self.broadcastDelegate?.send(command: .gridDefined, reliable: true)
-        Task { @MainActor in
-            self.renderDelegate?.didChangeGridStatus(isDefined: true)
-        }
+        self.renderDelegate?.didChangeGridStatus(isDefined: true)
     }
 
-    @MainActor func handleTap(at point: CGPoint) throws {
+    @MainActor func handleTap(at point: CGPoint) {
         guard let gameDelegate, self.isOwner else {
             return
         }
-        guard let place = try self.queryPlace(at: point) else {
+        guard let place = self.queryPlace(at: point), place.parent == self.currentGrid else {
             return
         }
+        self.isOwner = false
         place.fill(with: gameDelegate.myAvatar, colour: gameDelegate.myColour)
         gameDelegate.didPlaceActor(at: place.placePosition)
+        gameDelegate.didChangeOwner(isOwner: false)
         self.broadcastDelegate?.send(command: .placedActor(place.placePosition), reliable: true)
-        self.isOwner = false
-        self.gameDelegate?.didChangeOwner(isOwner: false)
     }
 
     @MainActor private func placeOpponent(at position: Place.Position) {
         do {
-            guard let currentGrid else {
-                throw Error.gridNotDefined
-            }
-            guard let place = currentGrid.findPlace(at: position) else {
+            guard let place = self.currentGrid.findPlace(at: position) else {
                 throw Error.wrongPlace
             }
             guard let gameDelegate else {
@@ -91,10 +85,7 @@ final class SimulatorSceneController: SceneController {
         }
     }
 
-    private func queryPlace(at point: CGPoint) throws -> Place? {
-        guard self.currentGrid != nil else {
-            throw Error.gridNotDefined
-        }
+    private func queryPlace(at point: CGPoint) -> Place? {
         let hitTestResults = self.sceneView.hitTest(point)
         return hitTestResults.compactMap({ $0.node.parent as? Place }).first
     }
@@ -126,17 +117,10 @@ extension SimulatorSceneController: GameControllerSceneDelegate {
     }
 
     @MainActor func paintGrid(with colour: Actor.Colour) throws {
-        guard let currentGrid else {
-            throw Error.gridNotDefined
-        }
-        currentGrid.paintGrid(with: colour)
+        self.currentGrid.paintGrid(with: colour)
     }
 
     @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws {
-        guard let currentGrid else {
-            throw Error.gridNotDefined
-        }
-
         let shift: Float = 0.34
         let strikeThrough = StrikeThrough(type: type, colour: colour)
 
@@ -163,7 +147,7 @@ extension SimulatorSceneController: GameControllerSceneDelegate {
                 strikeThrough.position = SCNVector3([0.0, 0.0, 0.0])
         }
 
-        currentGrid.addChildNode(strikeThrough)
+        self.currentGrid.addChildNode(strikeThrough)
     }
 }
 
@@ -173,8 +157,8 @@ extension SimulatorSceneController: BroadcastControllerSceneDelegate {
     }
 
     @MainActor func didBreakConnection() {
-        self.sceneView.scene = nil
         self.broadcastDelegate?.sessionDidDisconnect()
+        self.sceneView.scene = nil
     }
 
     @MainActor func didEstablishConnection() {

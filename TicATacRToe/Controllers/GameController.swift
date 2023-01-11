@@ -110,9 +110,19 @@ final class GameController: ObservableObject {
         }
     }
 
-    private func handleError(_ error: Swift.Error) {
+    private func makeNewGrid() {
         Task { @MainActor in
-            self.interruptionDelegate?.handleError(error)
+            self.sceneDelegate?.makeNewGrid()
+        }
+    }
+
+    private func paintGrid(with colour: Actor.Colour) {
+        Task { @MainActor in
+            do {
+                try self.sceneDelegate?.paintGrid(with: colour)
+            } catch {
+                self.interruptionDelegate?.handleError(error)
+            }
         }
     }
 
@@ -130,6 +140,16 @@ final class GameController: ObservableObject {
             let description = "\(me): \(result.me)\n\(opponent): \(result.opponent)"
             let okAction = InterruptingAlert.Action(title: "OK", action: recover)
             self.interruptionDelegate?.showAlert(title: title, description: description, actions: [okAction])
+        }
+    }
+
+    private func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) {
+        Task { @MainActor in
+            do {
+                try self.sceneDelegate?.strikeThrough(type, colour: colour)
+            } catch {
+                self.interruptionDelegate?.handleError(error)
+            }
         }
     }
 }
@@ -177,67 +197,61 @@ extension GameController: SceneControllerGameDelegate {
     }
 
     func didPlaceActor(at position: Place.Position) {
-        Task { @MainActor in
-            self.state[self.currentAvatar]?.insert(position)
-            let state = self.state[self.currentAvatar]!
-            
-            do {
-                let hasWinner: Bool
-                let isMyTurn = self.currentAvatar != self.myAvatar
-                let strikeThroughColour: Actor.Colour = (isMyTurn ? self.myColour : self.myColour.opposite)
-                if state.contains(elements: [.topLeft, .top, .topRight]) {
-                    try self.sceneDelegate?.strikeThrough(.horizontal(.top), colour: strikeThroughColour)
-                    hasWinner = true
-                } else if state.contains(elements: [.left, .centre, .right]) {
-                    try self.sceneDelegate?.strikeThrough(.horizontal(.centre), colour: strikeThroughColour)
-                    hasWinner = true
-                } else if state.contains(elements: [.bottomLeft, .bottom, .bottomRight]) {
-                    try self.sceneDelegate?.strikeThrough(.horizontal(.bottom), colour: strikeThroughColour)
-                    hasWinner = true
-                } else if state.contains(elements: [.topLeft, .left, .bottomLeft]) {
-                    try self.sceneDelegate?.strikeThrough(.vertical(.left), colour: strikeThroughColour)
-                    hasWinner = true
-                } else if state.contains(elements: [.top, .centre, .bottom]) {
-                    try self.sceneDelegate?.strikeThrough(.vertical(.centre), colour: strikeThroughColour)
-                    hasWinner = true
-                } else if state.contains(elements: [.topRight, .right, .bottomRight]) {
-                    try self.sceneDelegate?.strikeThrough(.vertical(.right), colour: strikeThroughColour)
-                    hasWinner = true
-                } else if state.contains(elements: [.topLeft, .centre, .bottomRight]) {
-                    try self.sceneDelegate?.strikeThrough(.diagonal(.leftTop), colour: strikeThroughColour)
-                    hasWinner = true
-                } else if state.contains(elements: [.topRight, .centre, .bottomLeft]) {
-                    try self.sceneDelegate?.strikeThrough(.diagonal(.rightTop), colour: strikeThroughColour)
-                    hasWinner = true
-                } else {
-                    hasWinner = false
-                }
-                
-                if hasWinner {
-                    if isMyTurn {
-                        self.result.me += 1
-                    } else {
-                        self.result.opponent += 1
-                    }
-                    try self.sceneDelegate?.paintGrid(with: strikeThroughColour)
-                }
-                
-                let allPlacesFilled = 9
-                let filledWithCircles = self.state[.circle]?.count ?? 0
-                let filledWithCrosses = self.state[.cross]?.count ?? 0
-                let isDraw = (filledWithCircles + filledWithCrosses == allPlacesFilled)
-                if hasWinner || isDraw {
-                    self.state[.cross]?.removeAll()
-                    self.state[.circle]?.removeAll()
-                    self.currentAvatar = .cross
-                    self.myAvatar.toggle()
-                    
-                    if self.myAvatar == .cross {
-                        self.sceneDelegate?.makeNewGrid()
-                    }
-                }
-            } catch {
-                self.handleError(error)
+        self.state[self.currentAvatar]?.insert(position)
+        let state = self.state[self.currentAvatar]!
+
+        let hasWinner: Bool
+        let isMyTurn = self.currentAvatar == self.myAvatar
+        let strikeThroughColour: Actor.Colour = (isMyTurn ? self.myColour : self.myColour.opposite)
+        if state.contains(elements: [.topLeft, .top, .topRight]) {
+            self.strikeThrough(.horizontal(.top), colour: strikeThroughColour)
+            hasWinner = true
+        } else if state.contains(elements: [.left, .centre, .right]) {
+            self.strikeThrough(.horizontal(.centre), colour: strikeThroughColour)
+            hasWinner = true
+        } else if state.contains(elements: [.bottomLeft, .bottom, .bottomRight]) {
+            self.strikeThrough(.horizontal(.bottom), colour: strikeThroughColour)
+            hasWinner = true
+        } else if state.contains(elements: [.topLeft, .left, .bottomLeft]) {
+            self.strikeThrough(.vertical(.left), colour: strikeThroughColour)
+            hasWinner = true
+        } else if state.contains(elements: [.top, .centre, .bottom]) {
+            self.strikeThrough(.vertical(.centre), colour: strikeThroughColour)
+            hasWinner = true
+        } else if state.contains(elements: [.topRight, .right, .bottomRight]) {
+            self.strikeThrough(.vertical(.right), colour: strikeThroughColour)
+            hasWinner = true
+        } else if state.contains(elements: [.topLeft, .centre, .bottomRight]) {
+            self.strikeThrough(.diagonal(.leftTop), colour: strikeThroughColour)
+            hasWinner = true
+        } else if state.contains(elements: [.topRight, .centre, .bottomLeft]) {
+            self.strikeThrough(.diagonal(.rightTop), colour: strikeThroughColour)
+            hasWinner = true
+        } else {
+            hasWinner = false
+        }
+
+        if hasWinner {
+            if isMyTurn {
+                self.result.me += 1
+            } else {
+                self.result.opponent += 1
+            }
+            self.paintGrid(with: strikeThroughColour)
+        }
+
+        let allPlacesFilled = 9
+        let filledWithCircles = self.state[.circle]?.count ?? 0
+        let filledWithCrosses = self.state[.cross]?.count ?? 0
+        let isDraw = (filledWithCircles + filledWithCrosses == allPlacesFilled)
+        if hasWinner || isDraw {
+            self.state[.cross]?.removeAll()
+            self.state[.circle]?.removeAll()
+            self.currentAvatar = .cross
+            self.myAvatar.toggle()
+
+            if self.myAvatar == .cross {
+                self.makeNewGrid()
             }
         }
     }
