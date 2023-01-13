@@ -158,9 +158,7 @@ extension HybridSceneController: GameControllerSceneDelegate {
     }
 
     @MainActor func makeNewGrid() {
-        Task { @MainActor in
-            self.renderDelegate?.didChangeGridStatus(isDefined: false)
-        }
+        self.renderDelegate?.didChangeGridStatus(isDefined: false)
 
         let grid = Grid()
         grid.makeDefaultGrid()
@@ -216,14 +214,15 @@ extension HybridSceneController: BroadcastControllerSceneDelegate {
         .device
     }
 
-    func didBreakConnection() {
+    @MainActor func didBreakConnection() {
+        self.renderDelegate?.didChangeGridStatus(isDefined: true)
         self.broadcastDelegate?.sessionDidDisconnect()
         self.arView.session.pause()
         self.arView.session.delegate = nil
         self.arView.scene.synchronizationService = nil
     }
 
-    func didEstablishConnection() {
+    @MainActor func didEstablishConnection() {
         let configuration = ARWorldTrackingConfiguration()
         configuration.environmentTexturing = .automatic
         self.arView.session.run(configuration)

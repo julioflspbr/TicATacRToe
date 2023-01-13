@@ -62,8 +62,7 @@ final class SimulatorSceneController: SceneController {
         }
         self.isOwner = false
         place.fill(with: gameDelegate.myAvatar, colour: gameDelegate.myColour)
-        gameDelegate.didPlaceActor(at: place.placePosition)
-        gameDelegate.didChangeOwner(isOwner: false)
+        gameDelegate.didPlaceActor(at: place.placePosition, isMyTurn: true)
         self.broadcastDelegate?.send(command: .placedActor(place.placePosition), reliable: true)
     }
 
@@ -75,11 +74,9 @@ final class SimulatorSceneController: SceneController {
             guard let gameDelegate else {
                 return
             }
-            place.fill(with: gameDelegate.myAvatar.opposite, colour: gameDelegate.myColour.opposite)
-            gameDelegate.didPlaceActor(at: position)
-
             self.isOwner = true
-            self.gameDelegate?.didChangeOwner(isOwner: true)
+            place.fill(with: gameDelegate.myAvatar.opposite, colour: gameDelegate.myColour.opposite)
+            gameDelegate.didPlaceActor(at: position, isMyTurn: false)
         } catch {
             self.interruptionDelegate?.handleError(error)
         }
@@ -97,7 +94,6 @@ final class SimulatorSceneController: SceneController {
         self.sceneView.scene?.rootNode.addChildNode(grid)
         self.currentGrid = grid
         self.isOwner = false
-        self.gameDelegate?.didChangeOwner(isOwner: false)
     }
 }
 
@@ -157,6 +153,7 @@ extension SimulatorSceneController: BroadcastControllerSceneDelegate {
     }
 
     @MainActor func didBreakConnection() {
+        self.renderDelegate?.didChangeGridStatus(isDefined: true)
         self.broadcastDelegate?.sessionDidDisconnect()
         self.sceneView.scene = nil
     }

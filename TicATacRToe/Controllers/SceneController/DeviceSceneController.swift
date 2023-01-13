@@ -54,7 +54,7 @@ final class DeviceSceneController: NSObject, SceneController {
 
     private weak var currentGrid: Grid!
 
-    func adjustGrid(distance: Float, scale: Float) {
+    @MainActor func adjustGrid(distance: Float, scale: Float) {
         guard self.addingGrid != nil else {
             return
         }
@@ -62,7 +62,7 @@ final class DeviceSceneController: NSObject, SceneController {
         self.gridScale = (self.gridScale + (scale - 1.0) * 0.2).fenced(min: Constraints.Scale.min, max: Constraints.Scale.max)
     }
 
-    func defineGridPosition() throws {
+    @MainActor func defineGridPosition() throws {
         guard let addingGrid else {
             throw Error.notAddingGrid
         }
@@ -82,12 +82,10 @@ final class DeviceSceneController: NSObject, SceneController {
         self.sceneUpdateCancellable = nil
         self.addingGrid = nil
 
-        Task { @MainActor in
-            self.renderDelegate?.didChangeGridStatus(isDefined: true)
-        }
+        self.renderDelegate?.didChangeGridStatus(isDefined: true)
     }
 
-    func handleTap(at point: CGPoint) {
+    @MainActor func handleTap(at point: CGPoint) {
         guard let gameDelegate, self.currentGrid?.isOwner == true else {
             return
         }
@@ -164,7 +162,7 @@ extension DeviceSceneController: ARSessionDelegate {
 }
 
 extension DeviceSceneController: GameControllerSceneDelegate {
-    func deleteAllGrids() {
+    @MainActor func deleteAllGrids() {
         self.sceneUpdateCancellable = nil
         self.cancellables.removeAll()
 
@@ -173,10 +171,8 @@ extension DeviceSceneController: GameControllerSceneDelegate {
         }
     }
 
-    func makeNewGrid() {
-        Task { @MainActor in
-            self.renderDelegate?.didChangeGridStatus(isDefined: false)
-        }
+    @MainActor func makeNewGrid() {
+        self.renderDelegate?.didChangeGridStatus(isDefined: false)
 
         let grid = Grid()
         grid.makeDefaultGrid()
@@ -192,11 +188,11 @@ extension DeviceSceneController: GameControllerSceneDelegate {
             .sink(receiveValue: self.sceneUpdate(event:))
     }
 
-    func paintGrid(with colour: Actor.Colour) throws {
+    @MainActor func paintGrid(with colour: Actor.Colour) throws {
         self.currentGrid.paintGrid(with: colour)
     }
 
-    func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws -> Void {
+    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws -> Void {
         let shift: Float = 0.34
         let strikeThrough = StrikeThrough(type: type, colour: colour)
 
@@ -232,7 +228,8 @@ extension DeviceSceneController: BroadcastControllerSceneDelegate {
         .device
     }
 
-    func didBreakConnection() {
+    @MainActor func didBreakConnection() {
+        self.renderDelegate?.didChangeGridStatus(isDefined: true)
         self.broadcastDelegate?.sessionDidDisconnect()
         self.arView.scene.synchronizationService = nil
 
@@ -245,7 +242,7 @@ extension DeviceSceneController: BroadcastControllerSceneDelegate {
 
     }
 
-    func didEstablishConnection() {
+    @MainActor func didEstablishConnection() {
         do {
             guard let session = self.broadcastDelegate?.session else {
                 throw Error.connectivityNotSet

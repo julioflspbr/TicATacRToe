@@ -102,14 +102,14 @@ final class GameController: ObservableObject {
         }
     }
 
-    private func wrapUp(strikeThrough: StrikeThrough.StrikeType?, gridColour: Actor.Colour) {
+    private func wrapUp(avatar: Actor.Avatar, strikeThrough: StrikeThrough.StrikeType?, gridColour: Actor.Colour) {
         Task { @MainActor in
             do {
                 if let strikeThrough {
                     try self.sceneDelegate?.strikeThrough(strikeThrough, colour: gridColour)
                     try self.sceneDelegate?.paintGrid(with: gridColour)
                 }
-                if self.myAvatar == .circle {
+                if avatar == .circle {
                     self.sceneDelegate?.makeNewGrid()
                 }
             } catch {
@@ -214,7 +214,7 @@ extension GameController: SceneControllerGameDelegate {
         let filledWithCrosses = self.state[.cross]?.count ?? 0
         let isDraw = (filledWithCircles + filledWithCrosses == allPlacesFilled)
         if hasWinner || isDraw {
-            self.wrapUp(strikeThrough: strikeThrough, gridColour: strikeThroughColour)
+            self.wrapUp(avatar: self.myAvatar, strikeThrough: strikeThrough, gridColour: strikeThroughColour)
             self.state[.cross]?.removeAll()
             self.state[.circle]?.removeAll()
             self.myAvatar.toggle()
