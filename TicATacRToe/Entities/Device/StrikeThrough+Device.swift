@@ -35,7 +35,7 @@ final class StrikeThrough: Entity {
     }
 
     required init() {
-        fatalError("init() has not been implemented")
+        super.init()
     }
 }
 #endif

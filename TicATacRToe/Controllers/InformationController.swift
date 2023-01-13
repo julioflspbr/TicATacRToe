@@ -21,7 +21,6 @@ final class InformationController: ObservableObject, GameControllerInformationDe
     weak var interruptionDelegate: InformationControllerInterruptionDelegate?
 
     // MARK: - GameControllerInformationDelegate
-    @MainActor @Published var currentAvatar = Actor.Avatar.cross
     @MainActor @Published var isLobbySetUp = false
     @MainActor @Published var myAvatar = Actor.Avatar.cross
     @MainActor @Published var result = Wins()
@@ -44,7 +43,6 @@ final class InformationController: ObservableObject, GameControllerInformationDe
     }
 
     @MainActor func reset() {
-        self.currentAvatar = Actor.Avatar.cross
         self.isLobbySetUp = false
         self.myAvatar = Actor.Avatar.cross
         self.result = Wins()

@@ -32,7 +32,6 @@ final class InterruptionController: ObservableObject, GameControllerInterruption
     }
 
     @MainActor func handleError(_ error: Error) {
-        assertionFailure(error.localizedDescription)
         self.showAlert(title: "Bummer", description: error.localizedDescription, actions: [])
     }
 

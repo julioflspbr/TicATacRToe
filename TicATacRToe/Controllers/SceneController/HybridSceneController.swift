@@ -82,7 +82,6 @@ final class HybridSceneController: NSObject, SceneController {
 
         self.broadcastDelegate?.send(command: .gridDefined, reliable: true)
         self.renderDelegate?.didChangeGridStatus(isDefined: true)
-        self.gameDelegate?.didChangeOwner(isOwner: true)
     }
 
     @MainActor func handleTap(at point: CGPoint) {
@@ -116,12 +115,11 @@ final class HybridSceneController: NSObject, SceneController {
 
     private func reportAddedActor(event: SceneEvents.DidAddEntity) {
         if let actor = event.entity as? Actor, let place = actor.parent as? Place {
-            self.gameDelegate?.didPlaceActor(at: place.placePosition)
+            self.gameDelegate?.didPlaceActor(at: place.placePosition, isMyTurn: self.isOwner)
             if self.isOwner {
                 self.broadcastDelegate?.send(command: .placedActor(place.placePosition), reliable: true)
             }
             self.isOwner.toggle()
-            self.gameDelegate?.didChangeOwner(isOwner: self.isOwner)
         }
     }
 
@@ -142,13 +140,13 @@ final class HybridSceneController: NSObject, SceneController {
 
         let gridAnchor = AnchorEntity(world: reference.transform.matrix)
         let grid = Grid()
+        grid.makeDefaultGrid()
 
         gridAnchor.addChild(grid)
         self.arView.scene.addAnchor(gridAnchor)
 
         self.currentGrid = grid
         self.isOwner = false
-        self.gameDelegate?.didChangeOwner(isOwner: false)
     }
 }
 
@@ -165,6 +163,7 @@ extension HybridSceneController: GameControllerSceneDelegate {
         }
 
         let grid = Grid()
+        grid.makeDefaultGrid()
         grid.position.z = -self.gridDistance
         self.addingGrid = grid
 

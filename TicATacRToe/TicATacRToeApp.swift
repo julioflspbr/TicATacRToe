@@ -25,6 +25,8 @@ struct TicATacRToeApp: App {
 
         self.informationController.broadcastDelegate = self.broadcastController
         self.informationController.interruptionDelegate = self.interruptionController
+
+        Place.PositionComponent.registerComponent()
     }
 
 

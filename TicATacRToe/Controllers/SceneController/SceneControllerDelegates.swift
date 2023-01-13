@@ -9,6 +9,7 @@ import MultipeerConnectivity
 
 protocol SceneControllerBroadcastDelegate: AnyObject {
     var session: MCSession? { get }
+    func disconnect()
     func send(command: RPC, reliable: Bool)
     func sessionDidConnect()
     func sessionDidDisconnect()
@@ -17,8 +18,7 @@ protocol SceneControllerBroadcastDelegate: AnyObject {
 protocol SceneControllerGameDelegate: AnyObject {
     var myAvatar: Actor.Avatar { get }
     var myColour: Actor.Colour { get }
-    func didPlaceActor(at: Place.Position)
-    func didChangeOwner(isOwner: Bool)
+    func didPlaceActor(at: Place.Position, isMyTurn: Bool)
 }
 
 protocol SceneControllerInterruptionDelegate: AnyObject {

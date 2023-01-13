@@ -23,7 +23,7 @@ final class Actor: Entity {
     }
 
     required init() {
-        fatalError("init() has not been implemented")
+        super.init()
     }
 }
 

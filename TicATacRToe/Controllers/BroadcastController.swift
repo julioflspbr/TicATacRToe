@@ -153,7 +153,7 @@ final class BroadcastController: NSObject, ObservableObject {
             return
         }
 
-        let session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .none)
+        let session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
         session.delegate = self
 
         let browser = MCNearbyServiceBrowser(peer: myPeerID, serviceType: Self.serviceType)
@@ -310,6 +310,8 @@ extension BroadcastController: MCSessionDelegate {
             let command = try decoder.decode(RPC.self, from: data)
             self.sceneDelegate?.receive(command: command)
             self.receive(command: command)
+        } catch let DecodingError.dataCorrupted(context) {
+            print("Dropping corrupted data: \(context.debugDescription)")
         } catch {
             self.handleError(error)
         }

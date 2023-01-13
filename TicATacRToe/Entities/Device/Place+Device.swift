@@ -9,31 +9,40 @@
 import RealityKit
 
 final class Place: Entity {
-    let placePosition: Position
+    private var positionComponent: PositionComponent {
+        self.components[PositionComponent.self] as! PositionComponent
+    }
 
-    private var isFilled = false
+    var placePosition: Place.Position {
+        return positionComponent.position
+    }
 
     init(at position: Position) {
-        self.placePosition = position
         super.init()
         self.name = position.rawValue
 
         let tapAreaShape = ShapeResource.generateBox(width: 0.3, height: 0.3, depth: 0.3)
         let tapComponent = CollisionComponent(shapes: [tapAreaShape])
         self.components.set(tapComponent)
+
+        let placeComponent = PositionComponent(position: position, isFilled: false)
+        self.components.set(placeComponent)
+    }
+
+    required init() {
+        super.init()
     }
 
     func fill(with avatar: Actor.Avatar, colour: Actor.Colour) {
-        guard !self.isFilled else {
+        guard !self.positionComponent.isFilled else {
             return
         }
         let actor = Actor(avatar: avatar, colour: colour)
         self.addChild(actor)
-        self.isFilled = true
-    }
 
-    required init() {
-        fatalError("init() has not been implemented")
+        var positionComponent = self.positionComponent
+        positionComponent.isFilled = true
+        self.components.set(positionComponent)
     }
 }
 #endif

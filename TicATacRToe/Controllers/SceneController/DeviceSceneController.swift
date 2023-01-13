@@ -76,7 +76,6 @@ final class DeviceSceneController: NSObject, SceneController {
         addingGrid.transform = .identity
         permanentAnchor.addChild(addingGrid)
         self.arView.scene.addAnchor(permanentAnchor)
-        self.currentGrid = addingGrid
 
         self.gridDistance = Constraints.Scale.default
         self.gridScale = Constraints.Scale.default
@@ -100,16 +99,10 @@ final class DeviceSceneController: NSObject, SceneController {
     }
 
     private func handleError(_ error: Swift.Error) {
+        self.broadcastDelegate?.disconnect()
         Task { @MainActor in
             self.interruptionDelegate?.handleError(error)
         }
-    }
-
-    private func handleOwnershipChange(event: SynchronizationEvents.OwnershipChanged) {
-        guard let place = event.entity as? Place else {
-            return
-        }
-        self.gameDelegate?.didChangeOwner(isOwner: place.isOwner)
     }
 
     private func queryPlace(at point: CGPoint) -> Place? {
@@ -118,8 +111,14 @@ final class DeviceSceneController: NSObject, SceneController {
     }
 
     private func reportAddedActor(event: SceneEvents.DidAddEntity) {
-        if let actor = event.entity as? Actor, let place = actor.parent as? Place, place.isOwner {
-            self.gameDelegate?.didPlaceActor(at: place.placePosition)
+        if let grid = event.entity as? Grid {
+            self.currentGrid = grid
+        }
+        if let actor = event.entity as? Actor, let place = actor.parent as? Place, let grid = place.parent as? Grid {
+            self.gameDelegate?.didPlaceActor(at: place.placePosition, isMyTurn: grid.isOwner)
+            if !grid.isOwner {
+                self.requestOwnership()
+            }
         }
     }
 
@@ -162,12 +161,6 @@ extension DeviceSceneController: ARSessionDelegate {
             self.broadcastDelegate?.sessionDidConnect()
         }
     }
-
-    func session(_ session: ARSession, didRemove anchors: [ARAnchor]) {
-        if let participant = anchors.compactMap({ $0 as? ARParticipantAnchor }).first, participant.sessionIdentifier != session.identifier {
-            self.broadcastDelegate?.sessionDidDisconnect()
-        }
-    }
 }
 
 extension DeviceSceneController: GameControllerSceneDelegate {
@@ -186,6 +179,7 @@ extension DeviceSceneController: GameControllerSceneDelegate {
         }
 
         let grid = Grid()
+        grid.makeDefaultGrid()
         grid.position.z = -self.gridDistance
         self.addingGrid = grid
 
@@ -239,13 +233,16 @@ extension DeviceSceneController: BroadcastControllerSceneDelegate {
     }
 
     func didBreakConnection() {
+        self.broadcastDelegate?.sessionDidDisconnect()
+        self.arView.scene.synchronizationService = nil
+
         self.sceneUpdateCancellable = nil
         self.cancellables.removeAll()
         self.connectivity?.stopSync()
 
         self.arView.session.pause()
         self.arView.session.delegate = nil
-        self.arView.scene.synchronizationService = nil
+
     }
 
     func didEstablishConnection() {
@@ -268,11 +265,6 @@ extension DeviceSceneController: BroadcastControllerSceneDelegate {
             self.cancellables.removeAll()
 
             self.arView.scene
-                .publisher(for: SynchronizationEvents.OwnershipChanged.self)
-                .sink(receiveValue: self.handleOwnershipChange(event:))
-                .store(in: &self.cancellables)
-
-            self.arView.scene
                 .publisher(for: SceneEvents.DidAddEntity.self)
                 .sink(receiveValue: self.reportAddedActor(event:))
                 .store(in: &self.cancellables)
@@ -282,13 +274,8 @@ extension DeviceSceneController: BroadcastControllerSceneDelegate {
     }
 
     func receive(command: RPC) {
-        switch command {
-            case let .sessionData(data):
-                self.updateSession(with: data)
-            case .placedActor:
-                self.requestOwnership()
-            default:
-                break
+        if case let .sessionData(data) = command {
+            self.updateSession(with: data)
         }
     }
 }
