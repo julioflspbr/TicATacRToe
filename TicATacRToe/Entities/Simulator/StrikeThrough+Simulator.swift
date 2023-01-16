@@ -1,41 +1,23 @@
 //
-//  StrikeThrough.swift
+//  StrikeThrough+Simulator.swift
 //  TicATacRToe
 //
 //  Created by Júlio César Flores on 25/12/2022.
 //
 
+#if targetEnvironment(simulator)
 import SceneKit
 
-@MainActor final class StrikeThrough: SCNNode {
-    enum VerticalPosition {
-        case left
-        case centre
-        case right
-    }
-
-    enum HorizontalPosition {
-        case top
-        case centre
-        case bottom
-    }
-
-    enum DiagonalType {
-        case leftTop
-        case rightTop
-    }
-
-    enum StrikeType {
-        case horizontal(HorizontalPosition)
-        case vertical(VerticalPosition)
-        case diagonal(DiagonalType)
-    }
-
-
-    init(type: StrikeType) {
+final class StrikeThrough: SCNNode {
+    init(type: StrikeType, colour: Actor.Colour) {
         super.init()
 
+        let material = SCNMaterial()
+        material.diffuse.contents = colour.materialColour
+
         let stripe = SCNBox(width: 1.05, height: 0.02, length: 0.1, chamferRadius: 0.0)
+        stripe.materials = [material]
+        
         let template = SCNNode(geometry: stripe)
 
         switch type {
@@ -60,3 +42,4 @@ import SceneKit
         fatalError("init(coder:) has not been implemented")
     }
 }
+#endif

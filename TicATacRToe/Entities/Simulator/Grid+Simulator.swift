@@ -1,13 +1,14 @@
 //
-//  Grid.swift
+//  Grid+Simulator.swift
 //  TicATacRToe
 //
 //  Created by Júlio César Flores on 25/12/2022.
 //
 
+#if targetEnvironment(simulator)
 import SceneKit
 
-@MainActor final class Grid: SCNNode {
+final class Grid: SCNNode {
     let topLeftPlaceNode = Place(.topLeft)
     let topPlaceNode = Place(.top)
     let topRightPlaceNode = Place(.topRight)
@@ -18,9 +19,66 @@ import SceneKit
     let bottomPlaceNode = Place(.bottom)
     let bottomRightPlaceNode = Place(.bottomRight)
 
-    override init() {
-        super.init()
+    private var grid: SCNNode
 
+    override init() {
+        self.grid = SCNNode()
+        super.init()
+        self.addChildNode(self.grid)
+        self.makeGrid(colour: .white)
+        self.makePlaces()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func findPlace(at position: Place.Position) -> Place? {
+        self.childNode(withName: position.rawValue, recursively: false) as? Place
+    }
+
+    func paintGrid(with colour: Actor.Colour) {
+        self.grid.removeFromParentNode()
+        self.grid = SCNNode()
+        self.addChildNode(self.grid)
+        self.makeGrid(colour: colour.materialColour)
+    }
+
+    private func makeGrid(colour: UIColor) {
+        let thickness: CGFloat = 0.02
+        let length: CGFloat = 1.0
+        let stripePosition: Float = 0.17
+
+        let gridMaterial = SCNMaterial()
+        gridMaterial.diffuse.contents = colour
+
+        let verticalGeometry = SCNPlane(width: thickness, height: length)
+        let horizontalGeometry = SCNPlane(width: length, height: thickness)
+        verticalGeometry.materials = [gridMaterial]
+        horizontalGeometry.materials = [gridMaterial]
+
+        // left strip
+        let leftStripe = SCNNode(geometry: verticalGeometry)
+        leftStripe.position.x = -stripePosition
+        self.addChildNode(leftStripe)
+
+        // right strip
+        let rightStripe = SCNNode(geometry: verticalGeometry)
+        rightStripe.position.x = stripePosition
+        self.addChildNode(rightStripe)
+
+        // top strip
+        let topStripe = SCNNode(geometry: horizontalGeometry)
+        topStripe.position.y = stripePosition
+        self.addChildNode(topStripe)
+
+        // bottom strip
+        let bottomStripe = SCNNode(geometry: horizontalGeometry)
+        bottomStripe.position.y = -stripePosition
+        self.addChildNode(bottomStripe)
+    }
+
+    private func makePlaces() {
         let placePosition: Float = 0.34
 
         // top left placement
@@ -58,36 +116,6 @@ import SceneKit
         // bottom right placement
         self.bottomRightPlaceNode.position = SCNVector3(x: placePosition, y: -placePosition, z: 0)
         self.addChildNode(self.bottomRightPlaceNode)
-
-        let thickness: CGFloat = 0.02
-        let length: CGFloat = 1.0
-        let stripePosition: Float = 0.17
-
-        let verticalGeometry = SCNPlane(width: thickness, height: length)
-        let horizontalGeometry = SCNPlane(width: length, height: thickness)
-
-        // left strip
-        let leftStripe = SCNNode(geometry: verticalGeometry)
-        leftStripe.position.x = -stripePosition
-        self.addChildNode(leftStripe)
-
-        // right strip
-        let rightStripe = SCNNode(geometry: verticalGeometry)
-        rightStripe.position.x = stripePosition
-        self.addChildNode(rightStripe)
-
-        // top strip
-        let topStripe = SCNNode(geometry: horizontalGeometry)
-        topStripe.position.y = stripePosition
-        self.addChildNode(topStripe)
-
-        // bottom strip
-        let bottomStripe = SCNNode(geometry: horizontalGeometry)
-        bottomStripe.position.y = -stripePosition
-        self.addChildNode(bottomStripe)
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
     }
 }
+#endif

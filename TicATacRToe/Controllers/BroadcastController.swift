@@ -17,9 +17,17 @@ protocol BroadcastControllerInformationDelegate: AnyObject {
     @MainActor func reset()
 }
 
+protocol BroadcastControllerSceneDelegate: AnyObject {
+    var device: RPC.DeviceType { get }
+
+    func receive(command: RPC)
+
+    @MainActor func didBreakConnection()
+    @MainActor func didEstablishConnection()
+}
+
 protocol BroadcastControllerGameDelegate: AnyObject {
     var isLobbySetUp: Bool { get set }
-    func receive(command: RPC)
     func didConnect(isHost: Bool)
     func didDisconnect(isExpected: Bool, recover: (@escaping () -> Void))
 }
@@ -27,10 +35,14 @@ protocol BroadcastControllerGameDelegate: AnyObject {
 final class BroadcastController: NSObject, ObservableObject {
     private static let serviceType = "tic-a-tac-r-toe"
 
+    var opponent: MCPeerID?
+
     weak var alertDelegate: BroadcastControllerAlertDelegate?
     weak var gameDelegate: BroadcastControllerGameDelegate?
     weak var informationDelegate: BroadcastControllerInformationDelegate?
+    weak var sceneDelegate: BroadcastControllerSceneDelegate?
 
+    private(set) var session: MCSession?
     private(set) var availablePlayers = [String : MCPeerID]() {
         didSet {
             Task { @MainActor in
@@ -44,7 +56,6 @@ final class BroadcastController: NSObject, ObservableObject {
     private var connectionDebouncer: Task<Void, Never>?
     private var isDisconnectionExpected = false
     private var isHost = true
-    private var session: MCSession?
 
     private var connectionState = MCSessionState.notConnected {
         didSet {
@@ -58,40 +69,9 @@ final class BroadcastController: NSObject, ObservableObject {
     private var myPeerID: MCPeerID? {
         didSet {
             if self.myPeerID != oldValue {
-                self.broadcast()
+                self.startBroadcasting()
             }
         }
-    }
-    var opponent: MCPeerID?
-
-    private func broadcast() {
-        self.advertiser?.stopAdvertisingPeer()
-        self.browser?.stopBrowsingForPeers()
-        self.session?.disconnect()
-
-        guard let myPeerID else {
-            self.advertiser = nil
-            self.browser = nil
-            self.session = nil
-
-            return
-        }
-
-        let session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .none)
-        session.delegate = self
-
-        let browser = MCNearbyServiceBrowser(peer: myPeerID, serviceType: Self.serviceType)
-        browser.delegate = self
-        browser.startBrowsingForPeers()
-
-        let advertiser = MCNearbyServiceAdvertiser(peer: myPeerID, discoveryInfo: nil, serviceType: Self.serviceType)
-        advertiser.delegate = self
-        advertiser.startAdvertisingPeer()
-
-        self.session = session
-        self.browser = browser
-        self.advertiser = advertiser
-        self.isHost = true
     }
 
     private func finishDiscovery() {
@@ -133,9 +113,16 @@ final class BroadcastController: NSObject, ObservableObject {
     }
 
     private func receive(command: RPC) {
-        if case .matchEnded = command {
-            self.isDisconnectionExpected = true
-            self.session?.disconnect()
+        switch command {
+            case .connected:
+                Task { @MainActor in
+                    self.sceneDelegate?.didEstablishConnection()
+                }
+            case .matchEnded:
+                self.isDisconnectionExpected = true
+                self.session?.disconnect()
+            default:
+                break
         }
     }
 
@@ -151,6 +138,36 @@ final class BroadcastController: NSObject, ObservableObject {
         Task { @MainActor in
             self.informationDelegate?.reset()
         }
+    }
+
+    private func startBroadcasting() {
+        self.advertiser?.stopAdvertisingPeer()
+        self.browser?.stopBrowsingForPeers()
+        self.session?.disconnect()
+
+        guard let myPeerID else {
+            self.advertiser = nil
+            self.browser = nil
+            self.session = nil
+
+            return
+        }
+
+        let session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
+        session.delegate = self
+
+        let browser = MCNearbyServiceBrowser(peer: myPeerID, serviceType: Self.serviceType)
+        browser.delegate = self
+        browser.startBrowsingForPeers()
+
+        let advertiser = MCNearbyServiceAdvertiser(peer: myPeerID, discoveryInfo: nil, serviceType: Self.serviceType)
+        advertiser.delegate = self
+        advertiser.startAdvertisingPeer()
+
+        self.session = session
+        self.browser = browser
+        self.advertiser = advertiser
+        self.isHost = true
     }
 }
 
@@ -206,7 +223,6 @@ extension BroadcastController: InformationControllerBroadcastDelegate {
                 self?.myPeerID = nil
             }
 
-            self?.broadcast()
             self?.connectionDebouncer = nil
         }
     }
@@ -272,9 +288,13 @@ extension BroadcastController: MCSessionDelegate {
         if state == .connected {
             self.opponent = peerID
             self.finishDiscovery()
-            self.gameDelegate?.didConnect(isHost: self.isHost)
+            if let sceneDelegate {
+                self.send(command: .connected(sceneDelegate.device), reliable: true)
+            }
         } else if state == .notConnected {
-            self.gameDelegate?.didDisconnect(isExpected: self.isDisconnectionExpected, recover: self.broadcast)
+            Task { @MainActor in
+                self.sceneDelegate?.didBreakConnection()
+            }
             self.reset()
         }
         self.connectionState = state
@@ -288,8 +308,10 @@ extension BroadcastController: MCSessionDelegate {
         do {
             let decoder = JSONDecoder()
             let command = try decoder.decode(RPC.self, from: data)
+            self.sceneDelegate?.receive(command: command)
             self.receive(command: command)
-            self.gameDelegate?.receive(command: command)
+        } catch let DecodingError.dataCorrupted(context) {
+            print("Dropping corrupted data: \(context.debugDescription)")
         } catch {
             self.handleError(error)
         }
@@ -305,5 +327,15 @@ extension BroadcastController: MCSessionDelegate {
 
     func session(_ session: MCSession, didFinishReceivingResourceWithName resourceName: String, fromPeer peerID: MCPeerID, at localURL: URL?, withError error: Swift.Error?) {
         // we don't care
+    }
+}
+
+extension BroadcastController: SceneControllerBroadcastDelegate {
+    func sessionDidConnect() {
+        self.gameDelegate?.didConnect(isHost: self.isHost)
+    }
+
+    func sessionDidDisconnect() {
+        self.gameDelegate?.didDisconnect(isExpected: self.isDisconnectionExpected, recover: self.startBroadcasting)
     }
 }
