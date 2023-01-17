@@ -53,7 +53,7 @@
 		226DA8D7296B0A5D007C9ADC /* SceneControllerDelegates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneControllerDelegates.swift; sourceTree = "<group>"; };
 		22B360FA2952EF57004D49C9 /* GameController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameController.swift; sourceTree = "<group>"; };
 		22C6CCCC295440CE000D2D86 /* Place+Simulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Place+Simulator.swift"; sourceTree = "<group>"; };
-		22CAA43A2949B6A400FD9695 /* TicATacRToe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TicATacRToe.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		22CAA43A2949B6A400FD9695 /* TicATacRToe-MP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "TicATacRToe-MP.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		22CAA43D2949B6A400FD9695 /* TicATacRToeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TicATacRToeApp.swift; sourceTree = "<group>"; };
 		22CAA43F2949B6A400FD9695 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		22CAA4412949B6A700FD9695 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -127,7 +127,7 @@
 		22CAA4312949B6A400FD9695 = {
 			isa = PBXGroup;
 			children = (
-				22CAA43C2949B6A400FD9695 /* TicATacRToe */,
+				22CAA43C2949B6A400FD9695 /* MultiPlayer */,
 				22CAA43B2949B6A400FD9695 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -135,12 +135,12 @@
 		22CAA43B2949B6A400FD9695 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				22CAA43A2949B6A400FD9695 /* TicATacRToe.app */,
+				22CAA43A2949B6A400FD9695 /* TicATacRToe-MP.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		22CAA43C2949B6A400FD9695 /* TicATacRToe */ = {
+		22CAA43C2949B6A400FD9695 /* MultiPlayer */ = {
 			isa = PBXGroup;
 			children = (
 				70B6C788295DA20600FAB5C6 /* Info.plist */,
@@ -152,7 +152,7 @@
 				22CAA4432949B6A700FD9695 /* Preview */,
 				70D695602959689400770807 /* Views */,
 			);
-			path = TicATacRToe;
+			path = MultiPlayer;
 			sourceTree = "<group>";
 		};
 		22CAA4432949B6A700FD9695 /* Preview */ = {
@@ -233,9 +233,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		22CAA4392949B6A400FD9695 /* TicATacRToe */ = {
+		22CAA4392949B6A400FD9695 /* TicATacRToe-MP */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 22CAA45E2949B6A800FD9695 /* Build configuration list for PBXNativeTarget "TicATacRToe" */;
+			buildConfigurationList = 22CAA45E2949B6A800FD9695 /* Build configuration list for PBXNativeTarget "TicATacRToe-MP" */;
 			buildPhases = (
 				22CAA4362949B6A400FD9695 /* Sources */,
 				22CAA4372949B6A400FD9695 /* Frameworks */,
@@ -245,9 +245,9 @@
 			);
 			dependencies = (
 			);
-			name = TicATacRToe;
+			name = "TicATacRToe-MP";
 			productName = TicATacRToe;
-			productReference = 22CAA43A2949B6A400FD9695 /* TicATacRToe.app */;
+			productReference = 22CAA43A2949B6A400FD9695 /* TicATacRToe-MP.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -265,7 +265,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 22CAA4352949B6A400FD9695 /* Build configuration list for PBXProject "TicATacRToe" */;
+			buildConfigurationList = 22CAA4352949B6A400FD9695 /* Build configuration list for PBXProject "MultiPlayer" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -278,7 +278,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				22CAA4392949B6A400FD9695 /* TicATacRToe */,
+				22CAA4392949B6A400FD9695 /* TicATacRToe-MP */,
 			);
 		};
 /* End PBXProject section */
@@ -457,13 +457,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = TicATacRToe/Preview;
+				DEVELOPMENT_ASSET_PATHS = MultiPlayer/Preview;
 				DEVELOPMENT_TEAM = MG23T93MKJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = TicATacRToe/Info.plist;
+				INFOPLIST_FILE = MultiPlayer/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "";
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Improve your experience with Augmented Reality";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Eita nois";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
@@ -474,7 +475,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dk.shape.TicATacRToe;
+				PRODUCT_BUNDLE_IDENTIFIER = "dk.shape.tic-a-tac-r-toe";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -491,13 +492,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = TicATacRToe/Preview;
+				DEVELOPMENT_ASSET_PATHS = MultiPlayer/Preview;
 				DEVELOPMENT_TEAM = MG23T93MKJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = TicATacRToe/Info.plist;
+				INFOPLIST_FILE = MultiPlayer/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "";
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Improve your experience with Augmented Reality";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Eita nois";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
@@ -508,7 +510,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dk.shape.TicATacRToe;
+				PRODUCT_BUNDLE_IDENTIFIER = "dk.shape.tic-a-tac-r-toe";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -522,7 +524,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		22CAA4352949B6A400FD9695 /* Build configuration list for PBXProject "TicATacRToe" */ = {
+		22CAA4352949B6A400FD9695 /* Build configuration list for PBXProject "MultiPlayer" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				22CAA45C2949B6A800FD9695 /* Debug */,
@@ -531,7 +533,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		22CAA45E2949B6A800FD9695 /* Build configuration list for PBXNativeTarget "TicATacRToe" */ = {
+		22CAA45E2949B6A800FD9695 /* Build configuration list for PBXNativeTarget "TicATacRToe-MP" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				22CAA45F2949B6A800FD9695 /* Debug */,
