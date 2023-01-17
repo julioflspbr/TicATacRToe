@@ -17,10 +17,9 @@ struct RenderView: UIViewRepresentable {
     let deltaDistance: CGFloat
     let deltaScale: CGFloat
 
+    @Binding var defineGrid: (() -> Void)?
     @Binding var isGridDefined: Bool
     @Binding var tapPoint: CGPoint?
-
-    @State private var isGridDefinitionMethodTriggered = false
 
     @EnvironmentObject private var broadcastController: BroadcastController
     @EnvironmentObject private var gameController: GameController
@@ -30,12 +29,18 @@ struct RenderView: UIViewRepresentable {
     func makeUIView(context: Context) -> UIView {
         let sceneView = SCNView(frame: .zero, options: nil)
         context.coordinator.sceneView = sceneView
+        Task {
+            self.defineGrid = { self.defineGridPosition(coordinator: context.coordinator) }
+        }
         return sceneView
     }
 #else
     func makeUIView(context: Context) -> UIView {
         let arView = ARView(frame: .zero)
         context.coordinator.arView = arView
+        Task {
+            self.defineGrid = { self.defineGridPosition(coordinator: context.coordinator) }
+        }
         return arView
     }
 #endif
@@ -46,16 +51,6 @@ struct RenderView: UIViewRepresentable {
                 self.tapPoint = nil
                 if self.isGridDefined {
                     context.coordinator.handleTap(at: tapPoint)
-                }
-            }
-        }
-        if self.isGridDefined && !self.isGridDefinitionMethodTriggered {
-            Task {
-                self.isGridDefinitionMethodTriggered = true
-                do {
-                    try context.coordinator.defineGridPosition()
-                } catch {
-                    self.interruptionController.handleError(error)
                 }
             }
         }
@@ -78,12 +73,21 @@ struct RenderView: UIViewRepresentable {
 
         return sceneController
     }
+
+    private func defineGridPosition(coordinator: SceneCoordinator) {
+        Task {
+            do {
+                try coordinator.defineGridPosition()
+            } catch {
+                self.interruptionController.handleError(error)
+            }
+        }
+    }
 }
 
 extension RenderView: SceneControllerRenderDelegate {
     @MainActor func didChangeGridStatus(isDefined: Bool) {
         self.isGridDefined = isDefined
-        self.isGridDefinitionMethodTriggered = isDefined
     }
 }
 
@@ -156,12 +160,12 @@ extension SceneCoordinator: GameControllerSceneDelegate {
         self.sceneController?.makeNewGrid()
     }
 
-    func paintGrid(with colour: Actor.Colour) throws {
-        try self.sceneController?.paintGrid(with: colour)
+    func paintGrid(with colour: Actor.Colour) {
+        self.sceneController?.paintGrid(with: colour)
     }
 
-    func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws {
-        try self.sceneController?.strikeThrough(type, colour: colour)
+    func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) {
+        self.sceneController?.strikeThrough(type, colour: colour)
     }
 }
 

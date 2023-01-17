@@ -185,14 +185,16 @@ extension DeviceSceneController: GameControllerSceneDelegate {
 
         self.sceneUpdateCancellable = self.arView.scene
             .publisher(for: SceneEvents.Update.self)
-            .sink(receiveValue: self.sceneUpdate(event:))
+            .sink { [weak self] event in
+                self?.sceneUpdate(event: event)
+            }
     }
 
-    @MainActor func paintGrid(with colour: Actor.Colour) throws {
+    @MainActor func paintGrid(with colour: Actor.Colour) {
         self.currentGrid.paintGrid(with: colour)
     }
 
-    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws -> Void {
+    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) -> Void {
         let shift: Float = 0.34
         let strikeThrough = StrikeThrough(type: type, colour: colour)
 
@@ -263,7 +265,9 @@ extension DeviceSceneController: BroadcastControllerSceneDelegate {
 
             self.arView.scene
                 .publisher(for: SceneEvents.DidAddEntity.self)
-                .sink(receiveValue: self.reportAddedActor(event:))
+                .sink(receiveValue: { [weak self] event in
+                    self?.reportAddedActor(event: event)
+                })
                 .store(in: &self.cancellables)
         } catch {
             self.handleError(error)

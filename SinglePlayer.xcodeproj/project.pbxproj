@@ -11,6 +11,13 @@
 		2264B9E22976F2C9005F9B9D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2264B9E12976F2C9005F9B9D /* ContentView.swift */; };
 		2264B9E42976F2CB005F9B9D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2264B9E32976F2CB005F9B9D /* Assets.xcassets */; };
 		2264B9E72976F2CB005F9B9D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2264B9E62976F2CB005F9B9D /* Preview Assets.xcassets */; };
+		2264BA0A29771367005F9B9D /* GameController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2264BA0929771367005F9B9D /* GameController.swift */; };
+		2264BA0C2977152A005F9B9D /* Actor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2264BA0B2977152A005F9B9D /* Actor.swift */; };
+		2264BA0E297715AD005F9B9D /* Place.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2264BA0D297715AD005F9B9D /* Place.swift */; };
+		2264BA102977162B005F9B9D /* StrikeThrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2264BA0F2977162B005F9B9D /* StrikeThrough.swift */; };
+		2264BA13297719C3005F9B9D /* Grid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2264BA12297719C3005F9B9D /* Grid.swift */; };
+		2264BA1529772214005F9B9D /* RenderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2264BA1429772214005F9B9D /* RenderView.swift */; };
+		2264BA17297722A6005F9B9D /* SceneController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2264BA16297722A6005F9B9D /* SceneController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,6 +26,13 @@
 		2264B9E12976F2C9005F9B9D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		2264B9E32976F2CB005F9B9D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2264B9E62976F2CB005F9B9D /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		2264BA0929771367005F9B9D /* GameController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameController.swift; sourceTree = "<group>"; };
+		2264BA0B2977152A005F9B9D /* Actor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Actor.swift; sourceTree = "<group>"; };
+		2264BA0D297715AD005F9B9D /* Place.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Place.swift; sourceTree = "<group>"; };
+		2264BA0F2977162B005F9B9D /* StrikeThrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrikeThrough.swift; sourceTree = "<group>"; };
+		2264BA12297719C3005F9B9D /* Grid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Grid.swift; sourceTree = "<group>"; };
+		2264BA1429772214005F9B9D /* RenderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderView.swift; sourceTree = "<group>"; };
+		2264BA16297722A6005F9B9D /* SceneController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,10 +65,17 @@
 		2264B9DE2976F2C9005F9B9D /* SinglePlayer */ = {
 			isa = PBXGroup;
 			children = (
-				2264B9DF2976F2C9005F9B9D /* TicATacRToe_SinglePlayerApp.swift */,
+				2264BA0B2977152A005F9B9D /* Actor.swift */,
+				2264BA12297719C3005F9B9D /* Grid.swift */,
 				2264B9E12976F2C9005F9B9D /* ContentView.swift */,
+				2264BA0929771367005F9B9D /* GameController.swift */,
+				2264BA0D297715AD005F9B9D /* Place.swift */,
+				2264BA1429772214005F9B9D /* RenderView.swift */,
+				2264BA0F2977162B005F9B9D /* StrikeThrough.swift */,
+				2264B9DF2976F2C9005F9B9D /* TicATacRToe_SinglePlayerApp.swift */,
 				2264B9E32976F2CB005F9B9D /* Assets.xcassets */,
 				2264B9E52976F2CB005F9B9D /* Preview Content */,
+				2264BA16297722A6005F9B9D /* SceneController.swift */,
 			);
 			path = SinglePlayer;
 			sourceTree = "<group>";
@@ -138,7 +159,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				2264B9E22976F2C9005F9B9D /* ContentView.swift in Sources */,
+				2264BA17297722A6005F9B9D /* SceneController.swift in Sources */,
+				2264BA0A29771367005F9B9D /* GameController.swift in Sources */,
 				2264B9E02976F2C9005F9B9D /* TicATacRToe_SinglePlayerApp.swift in Sources */,
+				2264BA0C2977152A005F9B9D /* Actor.swift in Sources */,
+				2264BA0E297715AD005F9B9D /* Place.swift in Sources */,
+				2264BA13297719C3005F9B9D /* Grid.swift in Sources */,
+				2264BA1529772214005F9B9D /* RenderView.swift in Sources */,
+				2264BA102977162B005F9B9D /* StrikeThrough.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -270,6 +298,7 @@
 				DEVELOPMENT_TEAM = MG23T93MKJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Play Tic Tac Toe in AR";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -299,6 +328,7 @@
 				DEVELOPMENT_TEAM = MG23T93MKJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Play Tic Tac Toe in AR";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

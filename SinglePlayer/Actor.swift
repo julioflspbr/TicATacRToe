@@ -1,19 +1,28 @@
 //
-//  Actor+Device.swift
-//  TicATacRToe
+//  Actor.swift
+//  TicATacRToe-SP
 //
-//  Created by Julio Flores on 07/01/2023.
+//  Created by Julio Flores on 17/01/2023.
 //
 
-#if !targetEnvironment(simulator)
 import RealityKit
 
 final class Actor: Entity {
-    init(avatar: Avatar, colour: Colour) {
+    enum Avatar: String, Hashable {
+        case cross = "✕"
+        case circle = "◯"
+    }
+
+    enum Colour {
+        case red
+        case blue
+    }
+
+    init(avatar: Avatar) {
         super.init()
 
         let characterMesh = MeshResource.generateText(avatar.rawValue, extrusionDepth: 1.0)
-        let characterMaterial = SimpleMaterial(color: colour.materialColour, isMetallic: false)
+        let characterMaterial = SimpleMaterial(color: avatar.colour.materialColour, isMetallic: false)
         let characterEntity = ModelEntity(mesh: characterMesh, materials: [characterMaterial])
 
         self.addChild(characterEntity)
@@ -38,6 +47,38 @@ extension Actor.Colour {
     }
 }
 
+extension Actor.Avatar {
+    var colour: Actor.Colour {
+        switch self {
+            case .cross:
+                return .red
+            case .circle:
+                return .blue
+        }
+    }
+
+    var opposite: Self {
+        switch self {
+            case .circle:
+                return .cross
+            case .cross:
+                return .circle
+        }
+    }
+}
+
+extension Actor.Colour {
+    var opposite: Self {
+        switch self {
+            case .red:
+                return .blue
+            case .blue:
+                return .red
+        }
+    }
+}
+
+
 fileprivate extension Actor.Avatar {
     var position: SIMD3<Float> {
         switch self {
@@ -57,4 +98,3 @@ fileprivate extension Actor.Avatar {
         }
     }
 }
-#endif

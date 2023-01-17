@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  TicATacRToe-SinglePlayer
+//  TicATacRToe-SP
 //
 //  Created by Julio Flores on 17/01/2023.
 //
@@ -8,19 +8,44 @@
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundColor(.accentColor)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
+    @State private var defineGrid: (() -> Void)?
+    @State private var deltaDistance: CGFloat = 0.0
+    @State private var deltaScale: CGFloat = 0.0
+    @State private var isGridDefined = false
+    @State private var tapPoint: CGPoint?
 
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
+    var body: some View {
+        RenderView(deltaDistance: self.deltaDistance, deltaScale: self.deltaScale,
+                   defineGrid: $defineGrid, isGridDefined: $isGridDefined, tapPoint: $tapPoint)
+            .ignoresSafeArea()
+            .gesture(DragGesture(minimumDistance: 5.0)
+                .onChanged { drag in
+                    self.deltaDistance = drag.translation.height
+                }
+            )
+            .gesture(MagnificationGesture()
+                .onChanged { delta in
+                    self.deltaScale = delta
+                }
+            )
+            .onTapGesture(coordinateSpace: .global) { tap in
+                self.tapPoint = tap
+            }
+            .overlay(alignment: .bottom) {
+                if !self.isGridDefined {
+                    Button {
+                        self.defineGrid?()
+                    } label: {
+                        Image(systemName: "checkmark.circle")
+                            .resizable()
+                            .frame(width: 60.0, height: 60.0)
+                            .padding(5)
+                            .foregroundColor(.black)
+                            .background(Color.white)
+                            .clipShape(Circle())
+                            .shadow(radius: 10)
+                    }
+                }
+            }
     }
 }
