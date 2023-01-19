@@ -7,7 +7,7 @@
 
 import RealityKit
 
-final class Actor: Entity {
+enum Actor {
     enum Avatar: String, Hashable {
         case cross = "✕"
         case circle = "◯"
@@ -16,34 +16,6 @@ final class Actor: Entity {
     enum Colour {
         case red
         case blue
-    }
-
-    init(avatar: Avatar) {
-        super.init()
-
-        let characterMesh = MeshResource.generateText(avatar.rawValue, extrusionDepth: 1.0)
-        let characterMaterial = SimpleMaterial(color: avatar.colour.materialColour, isMetallic: false)
-        let characterEntity = ModelEntity(mesh: characterMesh, materials: [characterMaterial])
-
-        self.addChild(characterEntity)
-
-        characterEntity.position = avatar.position
-        characterEntity.scale = avatar.scale
-    }
-
-    required init() {
-        super.init()
-    }
-}
-
-extension Actor.Colour {
-    var materialColour: Material.Color {
-        switch self {
-            case .red:
-                return .red
-            case .blue:
-                return .blue
-        }
     }
 }
 

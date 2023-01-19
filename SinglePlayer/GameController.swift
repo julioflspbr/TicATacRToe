@@ -14,7 +14,7 @@ protocol GameControllerSceneDelegate: AnyObject {
     @MainActor func makeNewGrid()
 }
 
-final class GameController: ObservableObject, SceneControllerGameDelegate {
+final class GameController: ObservableObject {
     weak var sceneDelegate: GameControllerSceneDelegate?
 
     private(set) var myAvatar = Actor.Avatar.cross
