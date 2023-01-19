@@ -112,11 +112,11 @@ extension SimulatorSceneController: GameControllerSceneDelegate {
         self.addingGrid = Grid()
     }
 
-    @MainActor func paintGrid(with colour: Actor.Colour) throws {
+    @MainActor func paintGrid(with colour: Actor.Colour) {
         self.currentGrid.paintGrid(with: colour)
     }
 
-    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws {
+    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) {
         let shift: Float = 0.34
         let strikeThrough = StrikeThrough(type: type, colour: colour)
 

@@ -8,13 +8,15 @@
 import SwiftUI
 
 struct InteractiveView: View {
+    @State private var defineGrid: (() -> Void)?
     @State private var deltaDistance: CGFloat = 0.0
     @State private var deltaScale: CGFloat = 0.0
     @State private var isGridDefined = true
     @State private var tapPoint: CGPoint?
 
     var body: some View {
-        RenderView(deltaDistance: self.deltaDistance, deltaScale: self.deltaScale, isGridDefined: $isGridDefined, tapPoint: $tapPoint)
+        RenderView(deltaDistance: self.deltaDistance, deltaScale: self.deltaScale,
+                   defineGrid: $defineGrid, isGridDefined: $isGridDefined, tapPoint: $tapPoint)
             .ignoresSafeArea()
             .gesture(DragGesture(minimumDistance: 5.0)
                 .onChanged { drag in
@@ -30,9 +32,9 @@ struct InteractiveView: View {
                 self.tapPoint = tap
             }
             .overlay(alignment: .bottom) {
-                if !isGridDefined {
+                if !self.isGridDefined {
                     Button {
-                        self.isGridDefined = true
+                        self.defineGrid?()
                     } label: {
                         Image(systemName: "checkmark.circle")
                             .resizable()

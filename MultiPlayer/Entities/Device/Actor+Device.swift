@@ -13,7 +13,7 @@ final class Actor: Entity {
         super.init()
 
         let characterMesh = MeshResource.generateText(avatar.rawValue, extrusionDepth: 1.0)
-        let characterMaterial = SimpleMaterial(color: colour == .red ? .red : .blue, isMetallic: false)
+        let characterMaterial = SimpleMaterial(color: colour.materialColour, isMetallic: false)
         let characterEntity = ModelEntity(mesh: characterMesh, materials: [characterMaterial])
 
         self.addChild(characterEntity)

@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "22CAA4392949B6A400FD9695"
-               BuildableName = "TicATacRToe.app"
-               BlueprintName = "TicATacRToe"
-               ReferencedContainer = "container:TicATacRToe.xcodeproj">
+               BuildableName = "TicATacRToe-MP.app"
+               BlueprintName = "TicATacRToe-MP"
+               ReferencedContainer = "container:MultiPlayer.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -36,7 +36,7 @@
                BlueprintIdentifier = "22CAA4492949B6A700FD9695"
                BuildableName = "TicATacRToeTests.xctest"
                BlueprintName = "TicATacRToeTests"
-               ReferencedContainer = "container:TicATacRToe.xcodeproj">
+               ReferencedContainer = "container:MultiPlayer.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -47,7 +47,7 @@
                BlueprintIdentifier = "22CAA4532949B6A700FD9695"
                BuildableName = "TicATacRToeUITests.xctest"
                BlueprintName = "TicATacRToeUITests"
-               ReferencedContainer = "container:TicATacRToe.xcodeproj">
+               ReferencedContainer = "container:MultiPlayer.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -67,9 +67,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22CAA4392949B6A400FD9695"
-            BuildableName = "TicATacRToe.app"
-            BlueprintName = "TicATacRToe"
-            ReferencedContainer = "container:TicATacRToe.xcodeproj">
+            BuildableName = "TicATacRToe-MP.app"
+            BlueprintName = "TicATacRToe-MP"
+            ReferencedContainer = "container:MultiPlayer.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -84,9 +84,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22CAA4392949B6A400FD9695"
-            BuildableName = "TicATacRToe.app"
-            BlueprintName = "TicATacRToe"
-            ReferencedContainer = "container:TicATacRToe.xcodeproj">
+            BuildableName = "TicATacRToe-MP.app"
+            BlueprintName = "TicATacRToe-MP"
+            ReferencedContainer = "container:MultiPlayer.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

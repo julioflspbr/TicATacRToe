@@ -12,7 +12,7 @@ import Foundation
 import RealityKit
 import MultipeerConnectivity
 
-final class DeviceSceneController: NSObject, SceneController {
+final class HybridSceneController: NSObject, SceneController {
     private enum Constraints {
         enum Distance {
             static var `default`: Float { 2.0 }
@@ -28,9 +28,8 @@ final class DeviceSceneController: NSObject, SceneController {
     }
 
     enum Error: Swift.Error {
-        case connectivityNotSet
         case notAddingGrid
-        case ownershipTransferError
+        case wrongPlace
     }
 
     private let cameraReference = Entity()
@@ -46,11 +45,8 @@ final class DeviceSceneController: NSObject, SceneController {
     private var cancellables = Set<AnyCancellable>()
     private var gridDistance = Constraints.Distance.default
     private var gridScale = Constraints.Scale.default
+    private var isOwner = false
     private var sceneUpdateCancellable: AnyCancellable?
-
-    private var connectivity: MultipeerConnectivityService? {
-        self.arView.scene.synchronizationService as? MultipeerConnectivityService
-    }
 
     private weak var currentGrid: Grid!
 
@@ -76,31 +72,26 @@ final class DeviceSceneController: NSObject, SceneController {
         addingGrid.transform = .identity
         permanentAnchor.addChild(addingGrid)
         self.arView.scene.addAnchor(permanentAnchor)
+        self.currentGrid = addingGrid
 
         self.gridDistance = Constraints.Scale.default
         self.gridScale = Constraints.Scale.default
         self.sceneUpdateCancellable = nil
         self.addingGrid = nil
+        self.isOwner = true
 
+        self.broadcastDelegate?.send(command: .gridDefined, reliable: true)
         self.renderDelegate?.didChangeGridStatus(isDefined: true)
     }
 
     @MainActor func handleTap(at point: CGPoint) {
-        guard let gameDelegate, self.currentGrid?.isOwner == true else {
+        guard let gameDelegate, self.isOwner else {
             return
         }
         guard let place = self.queryPlace(at: point), place.parent == self.currentGrid else {
             return
         }
         place.fill(with: gameDelegate.myAvatar, colour: gameDelegate.myColour)
-        self.broadcastDelegate?.send(command: .placedActor(place.placePosition), reliable: true)
-    }
-
-    private func handleError(_ error: Swift.Error) {
-        self.broadcastDelegate?.disconnect()
-        Task { @MainActor in
-            self.interruptionDelegate?.handleError(error)
-        }
     }
 
     private func queryPlace(at point: CGPoint) -> Place? {
@@ -108,23 +99,27 @@ final class DeviceSceneController: NSObject, SceneController {
         return queryResults.compactMap({ $0.entity as? Place }).first
     }
 
-    private func reportAddedActor(event: SceneEvents.DidAddEntity) {
-        if let grid = event.entity as? Grid {
-            self.currentGrid = grid
-        }
-        if let actor = event.entity as? Actor, let place = actor.parent as? Place, let grid = place.parent as? Grid {
-            self.gameDelegate?.didPlaceActor(at: place.placePosition, isMyTurn: grid.isOwner)
-            if !grid.isOwner {
-                self.requestOwnership()
+    @MainActor private func placeOpponent(at position: Place.Position) {
+        do {
+            guard let place = self.currentGrid.findPlace(at: position) else {
+                throw Error.wrongPlace
             }
+            guard let gameDelegate else {
+                return
+            }
+            place.fill(with: gameDelegate.myAvatar.opposite, colour: gameDelegate.myColour.opposite)
+        } catch {
+            self.interruptionDelegate?.handleError(error)
         }
     }
 
-    private func requestOwnership() {
-        self.currentGrid.requestOwnership { [weak self] failure in
-            if case .timedOut = failure {
-                self?.handleError(Error.ownershipTransferError)
+    private func reportAddedActor(event: SceneEvents.DidAddEntity) {
+        if let actor = event.entity as? Actor, let place = actor.parent as? Place {
+            self.gameDelegate?.didPlaceActor(at: place.placePosition, isMyTurn: self.isOwner)
+            if self.isOwner {
+                self.broadcastDelegate?.send(command: .placedActor(place.placePosition), reliable: true)
             }
+            self.isOwner.toggle()
         }
     }
 
@@ -133,42 +128,33 @@ final class DeviceSceneController: NSObject, SceneController {
         self.addingGrid?.scale = [self.gridScale, self.gridScale, 1.0]
     }
 
-    private func updateSession(with data: Data) {
-        do {
-            if let collabotationData = try NSKeyedUnarchiver.unarchivedObject(ofClass: ARSession.CollaborationData.self, from: data) {
-                self.arView.session.update(with: collabotationData)
-            }
-        } catch {
-            self.handleError(error)
-        }
+    @MainActor private func spawnGridAsTenant() {
+        let cameraAnchor = AnchorEntity(.camera)
+        let reference = Entity()
+
+        self.arView.scene.addAnchor(cameraAnchor)
+        cameraAnchor.addChild(reference)
+        reference.position.z = -2.5
+        reference.removeFromParent(preservingWorldTransform: true)
+        cameraAnchor.removeFromParent()
+
+        let gridAnchor = AnchorEntity(world: reference.transform.matrix)
+        let grid = Grid()
+        grid.makeDefaultGrid()
+
+        gridAnchor.addChild(grid)
+        self.arView.scene.addAnchor(gridAnchor)
+
+        self.currentGrid = grid
+        self.isOwner = false
     }
 }
 
-extension DeviceSceneController: ARSessionDelegate {
-    func session(_ session: ARSession, didOutputCollaborationData collabotationData: ARSession.CollaborationData) {
-        do {
-            let data = try NSKeyedArchiver.archivedData(withRootObject: collabotationData, requiringSecureCoding: true)
-            self.broadcastDelegate?.send(command: .sessionData(data), reliable: (collabotationData.priority == .critical))
-        } catch {
-            self.handleError(error)
-        }
-    }
-
-    func session(_ session: ARSession, didAdd anchors: [ARAnchor]) {
-        if let participant = anchors.compactMap({ $0 as? ARParticipantAnchor }).first, participant.sessionIdentifier != session.identifier {
-            self.broadcastDelegate?.sessionDidConnect()
-        }
-    }
-}
-
-extension DeviceSceneController: GameControllerSceneDelegate {
+extension HybridSceneController: GameControllerSceneDelegate {
     @MainActor func deleteAllGrids() {
         self.sceneUpdateCancellable = nil
         self.cancellables.removeAll()
-
-        self.arView.scene.anchors.forEach { element in
-            element.removeFromParent()
-        }
+        self.arView.scene.anchors.removeAll()
     }
 
     @MainActor func makeNewGrid() {
@@ -185,14 +171,16 @@ extension DeviceSceneController: GameControllerSceneDelegate {
 
         self.sceneUpdateCancellable = self.arView.scene
             .publisher(for: SceneEvents.Update.self)
-            .sink(receiveValue: self.sceneUpdate(event:))
+            .sink { [weak self] event in
+                self?.sceneUpdate(event: event)
+            }
     }
 
-    @MainActor func paintGrid(with colour: Actor.Colour) throws {
+    @MainActor func paintGrid(with colour: Actor.Colour) {
         self.currentGrid.paintGrid(with: colour)
     }
 
-    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws -> Void {
+    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) -> Void {
         let shift: Float = 0.34
         let strikeThrough = StrikeThrough(type: type, colour: colour)
 
@@ -223,7 +211,7 @@ extension DeviceSceneController: GameControllerSceneDelegate {
     }
 }
 
-extension DeviceSceneController: BroadcastControllerSceneDelegate {
+extension HybridSceneController: BroadcastControllerSceneDelegate {
     var device: RPC.DeviceType {
         .device
     }
@@ -231,48 +219,38 @@ extension DeviceSceneController: BroadcastControllerSceneDelegate {
     @MainActor func didBreakConnection() {
         self.renderDelegate?.didChangeGridStatus(isDefined: true)
         self.broadcastDelegate?.sessionDidDisconnect()
-        self.arView.scene.synchronizationService = nil
-
-        self.sceneUpdateCancellable = nil
-        self.cancellables.removeAll()
-        self.connectivity?.stopSync()
-
         self.arView.session.pause()
         self.arView.session.delegate = nil
-
+        self.arView.scene.synchronizationService = nil
     }
 
     @MainActor func didEstablishConnection() {
-        do {
-            guard let session = self.broadcastDelegate?.session else {
-                throw Error.connectivityNotSet
-            }
+        let configuration = ARWorldTrackingConfiguration()
+        configuration.environmentTexturing = .automatic
+        self.arView.session.run(configuration)
 
-            let configuration = ARWorldTrackingConfiguration()
-            configuration.environmentTexturing = .automatic
-            configuration.isCollaborationEnabled = true
+        self.cancellables.removeAll()
 
-            let connectivity = try MultipeerConnectivityService(session: session)
-            connectivity.startSync()
-
-            self.arView.session.run(configuration)
-            self.arView.session.delegate = self
-            self.arView.scene.synchronizationService = connectivity
-
-            self.cancellables.removeAll()
-
-            self.arView.scene
-                .publisher(for: SceneEvents.DidAddEntity.self)
-                .sink(receiveValue: self.reportAddedActor(event:))
-                .store(in: &self.cancellables)
-        } catch {
-            self.handleError(error)
-        }
+        self.arView.scene
+            .publisher(for: SceneEvents.DidAddEntity.self)
+            .sink(receiveValue: { [weak self] event in
+                self?.reportAddedActor(event: event)
+            })
+            .store(in: &self.cancellables)
     }
 
     func receive(command: RPC) {
-        if case let .sessionData(data) = command {
-            self.updateSession(with: data)
+        Task { @MainActor in
+            switch command {
+                case .gridDefined:
+                    self.spawnGridAsTenant()
+                case let .placedActor(position):
+                    self.placeOpponent(at: position)
+                case .connected:
+                    self.broadcastDelegate?.sessionDidConnect()
+                default:
+                    break
+            }
         }
     }
 }

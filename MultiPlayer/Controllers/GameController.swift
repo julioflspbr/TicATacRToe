@@ -24,15 +24,14 @@ protocol GameControllerInformationDelegate: AnyObject {
 protocol GameControllerInterruptionDelegate: AnyObject {
     @MainActor func allow3DInteraction()
     @MainActor func deny3DInteraction()
-    @MainActor func handleError(_ error: Error)
     @MainActor func showAlert(title: String, description: String, actions: [InterruptingAlert.Action])
 }
 
 protocol GameControllerSceneDelegate: AnyObject {
     @MainActor func deleteAllGrids()
     @MainActor func makeNewGrid()
-    @MainActor func paintGrid(with: Actor.Colour) throws
-    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws
+    @MainActor func paintGrid(with: Actor.Colour)
+    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour)
 }
 
 final class GameController: ObservableObject {
@@ -104,16 +103,12 @@ final class GameController: ObservableObject {
 
     private func wrapUp(avatar: Actor.Avatar, strikeThrough: StrikeThrough.StrikeType?, gridColour: Actor.Colour) {
         Task { @MainActor in
-            do {
-                if let strikeThrough {
-                    try self.sceneDelegate?.strikeThrough(strikeThrough, colour: gridColour)
-                    try self.sceneDelegate?.paintGrid(with: gridColour)
-                }
-                if avatar == .circle {
-                    self.sceneDelegate?.makeNewGrid()
-                }
-            } catch {
-                self.interruptionDelegate?.handleError(error)
+            if let strikeThrough {
+                self.sceneDelegate?.strikeThrough(strikeThrough, colour: gridColour)
+                self.sceneDelegate?.paintGrid(with: gridColour)
+            }
+            if avatar == .circle {
+                self.sceneDelegate?.makeNewGrid()
             }
         }
     }

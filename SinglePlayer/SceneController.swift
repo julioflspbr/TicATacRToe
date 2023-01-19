@@ -1,18 +1,27 @@
 //
-//  SceneController+Device.swift
-//  TicATacRToe
+//  SceneController.swift
+//  TicATacRToe-SP
 //
-//  Created by Julio Flores on 07/01/2023.
+//  Created by Julio Flores on 17/01/2023.
 //
 
-#if !targetEnvironment(simulator)
+import Foundation
+
 import ARKit
 import Combine
 import Foundation
 import RealityKit
-import MultipeerConnectivity
 
-final class HybridSceneController: NSObject, SceneController {
+protocol SceneControllerGameDelegate: AnyObject {
+    var myAvatar: Actor.Avatar { get }
+    func didPlaceActor(at: Place.Position)
+}
+
+protocol SceneControllerRenderDelegate {
+    @MainActor func didChangeGridStatus(isDefined: Bool)
+}
+
+final class SceneController {
     private enum Constraints {
         enum Distance {
             static var `default`: Float { 2.0 }
@@ -29,7 +38,6 @@ final class HybridSceneController: NSObject, SceneController {
 
     enum Error: Swift.Error {
         case notAddingGrid
-        case wrongPlace
     }
 
     private let cameraReference = Entity()
@@ -37,15 +45,12 @@ final class HybridSceneController: NSObject, SceneController {
     var renderDelegate: SceneControllerRenderDelegate?
 
     weak var arView: ARView!
-    weak var broadcastDelegate: SceneControllerBroadcastDelegate?
     weak var gameDelegate: SceneControllerGameDelegate?
-    weak var interruptionDelegate: SceneControllerInterruptionDelegate?
 
     private var addingGrid: Grid?
-    private var cancellables = Set<AnyCancellable>()
+    private var addPlaceCancellable: AnyCancellable?
     private var gridDistance = Constraints.Distance.default
     private var gridScale = Constraints.Scale.default
-    private var isOwner = false
     private var sceneUpdateCancellable: AnyCancellable?
 
     private weak var currentGrid: Grid!
@@ -74,24 +79,30 @@ final class HybridSceneController: NSObject, SceneController {
         self.arView.scene.addAnchor(permanentAnchor)
         self.currentGrid = addingGrid
 
+        self.addPlaceCancellable = self.arView.scene
+            .publisher(for: SceneEvents.DidAddEntity.self)
+            .sink { [weak self] event in
+                self?.reportAddedActor(event: event)
+            }
+
         self.gridDistance = Constraints.Scale.default
         self.gridScale = Constraints.Scale.default
         self.sceneUpdateCancellable = nil
         self.addingGrid = nil
-        self.isOwner = true
 
-        self.broadcastDelegate?.send(command: .gridDefined, reliable: true)
-        self.renderDelegate?.didChangeGridStatus(isDefined: true)
+        Task {
+            self.renderDelegate?.didChangeGridStatus(isDefined: true)
+        }
     }
 
     @MainActor func handleTap(at point: CGPoint) {
-        guard let gameDelegate, self.isOwner else {
+        guard let gameDelegate, self.currentGrid?.isOwner == true else {
             return
         }
         guard let place = self.queryPlace(at: point), place.parent == self.currentGrid else {
             return
         }
-        place.fill(with: gameDelegate.myAvatar, colour: gameDelegate.myColour)
+        place.fill(with: gameDelegate.myAvatar)
     }
 
     private func queryPlace(at point: CGPoint) -> Place? {
@@ -99,27 +110,9 @@ final class HybridSceneController: NSObject, SceneController {
         return queryResults.compactMap({ $0.entity as? Place }).first
     }
 
-    @MainActor private func placeOpponent(at position: Place.Position) {
-        do {
-            guard let place = self.currentGrid.findPlace(at: position) else {
-                throw Error.wrongPlace
-            }
-            guard let gameDelegate else {
-                return
-            }
-            place.fill(with: gameDelegate.myAvatar.opposite, colour: gameDelegate.myColour.opposite)
-        } catch {
-            self.interruptionDelegate?.handleError(error)
-        }
-    }
-
     private func reportAddedActor(event: SceneEvents.DidAddEntity) {
         if let actor = event.entity as? Actor, let place = actor.parent as? Place {
-            self.gameDelegate?.didPlaceActor(at: place.placePosition, isMyTurn: self.isOwner)
-            if self.isOwner {
-                self.broadcastDelegate?.send(command: .placedActor(place.placePosition), reliable: true)
-            }
-            self.isOwner.toggle()
+            self.gameDelegate?.didPlaceActor(at: place.placePosition)
         }
     }
 
@@ -127,38 +120,13 @@ final class HybridSceneController: NSObject, SceneController {
         self.addingGrid?.position.z = -self.gridDistance
         self.addingGrid?.scale = [self.gridScale, self.gridScale, 1.0]
     }
-
-    @MainActor private func spawnGridAsTenant() {
-        let cameraAnchor = AnchorEntity(.camera)
-        let reference = Entity()
-
-        self.arView.scene.addAnchor(cameraAnchor)
-        cameraAnchor.addChild(reference)
-        reference.position.z = -2.5
-        reference.removeFromParent(preservingWorldTransform: true)
-        cameraAnchor.removeFromParent()
-
-        let gridAnchor = AnchorEntity(world: reference.transform.matrix)
-        let grid = Grid()
-        grid.makeDefaultGrid()
-
-        gridAnchor.addChild(grid)
-        self.arView.scene.addAnchor(gridAnchor)
-
-        self.currentGrid = grid
-        self.isOwner = false
-    }
 }
 
-extension HybridSceneController: GameControllerSceneDelegate {
-    @MainActor func deleteAllGrids() {
-        self.sceneUpdateCancellable = nil
-        self.cancellables.removeAll()
-        self.arView.scene.anchors.removeAll()
-    }
-
+extension SceneController: GameControllerSceneDelegate {
     @MainActor func makeNewGrid() {
-        self.renderDelegate?.didChangeGridStatus(isDefined: false)
+        Task {
+            self.renderDelegate?.didChangeGridStatus(isDefined: false)
+        }
 
         let grid = Grid()
         grid.makeDefaultGrid()
@@ -169,16 +137,17 @@ extension HybridSceneController: GameControllerSceneDelegate {
         anchor.addChild(grid)
         self.arView.scene.addAnchor(anchor)
 
+        self.addPlaceCancellable = nil
         self.sceneUpdateCancellable = self.arView.scene
             .publisher(for: SceneEvents.Update.self)
             .sink(receiveValue: self.sceneUpdate(event:))
     }
 
-    @MainActor func paintGrid(with colour: Actor.Colour) throws {
+    @MainActor func paintGrid(with colour: Actor.Colour) {
         self.currentGrid.paintGrid(with: colour)
     }
 
-    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) throws -> Void {
+    @MainActor func strikeThrough(_ type: StrikeThrough.StrikeType, colour: Actor.Colour) -> Void {
         let shift: Float = 0.34
         let strikeThrough = StrikeThrough(type: type, colour: colour)
 
@@ -209,45 +178,8 @@ extension HybridSceneController: GameControllerSceneDelegate {
     }
 }
 
-extension HybridSceneController: BroadcastControllerSceneDelegate {
-    var device: RPC.DeviceType {
-        .device
-    }
-
-    @MainActor func didBreakConnection() {
-        self.renderDelegate?.didChangeGridStatus(isDefined: true)
-        self.broadcastDelegate?.sessionDidDisconnect()
-        self.arView.session.pause()
-        self.arView.session.delegate = nil
-        self.arView.scene.synchronizationService = nil
-    }
-
-    @MainActor func didEstablishConnection() {
-        let configuration = ARWorldTrackingConfiguration()
-        configuration.environmentTexturing = .automatic
-        self.arView.session.run(configuration)
-
-        self.cancellables.removeAll()
-
-        self.arView.scene
-            .publisher(for: SceneEvents.DidAddEntity.self)
-            .sink(receiveValue: self.reportAddedActor(event:))
-            .store(in: &self.cancellables)
-    }
-
-    func receive(command: RPC) {
-        Task { @MainActor in
-            switch command {
-                case .gridDefined:
-                    self.spawnGridAsTenant()
-                case let .placedActor(position):
-                    self.placeOpponent(at: position)
-                case .connected:
-                    self.broadcastDelegate?.sessionDidConnect()
-                default:
-                    break
-            }
-        }
+extension FloatingPoint {
+    func fenced(min: Self, max: Self) -> Self {
+        Self.minimum(Self.maximum(self, min), max)
     }
 }
-#endif
